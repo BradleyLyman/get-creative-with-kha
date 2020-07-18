@@ -4,3 +4,7 @@ build
 *.vscode
 
 *.tmp
+
+_site/*
+*/_site/
+_site

@@ -10,64 +10,49 @@ function $extend(from, fields) {
 	return proto;
 }
 var App = function() {
+	this.mouse = new kha_math_FastVector2(0,0);
 	this.t = 0.0;
-	this.POINTS = 100;
-	this.FRAME_TIME = 0.016666666666666666;
-	this.ANGULAR_SPEED = Math.PI / 4;
-	var this1 = new Array(this.POINTS);
-	this.xs = this1;
-	var this2 = new Array(this.POINTS);
-	this.ys = this2;
+	kha_input_Mouse.get().notify(null,null,$bind(this,this.setMouse),null);
+	this.backbuffer = kha_Image.createRenderTarget(kha_System.windowWidth(),kha_System.windowHeight(),null,null,1);
 };
 $hxClasses["App"] = App;
 App.__name__ = true;
 App.prototype = {
-	ANGULAR_SPEED: null
-	,FRAME_TIME: null
-	,POINTS: null
-	,xs: null
-	,ys: null
-	,t: null
+	t: null
+	,mouse: null
+	,backbuffer: null
+	,onResize: function(w,h) {
+		haxe_Log.trace("resized " + w + ", " + h,{ fileName : "App.hx", lineNumber : 38, className : "App", methodName : "onResize"});
+		var newBuf = kha_Image.createRenderTarget(w,h,null,null,1);
+		kha_Scaler.scale(this.backbuffer,newBuf,0);
+		this.backbuffer = newBuf;
+	}
 	,update: function() {
-		this.t += this.FRAME_TIME * this.ANGULAR_SPEED;
-		var centerX = kha_System.windowWidth() / 2;
-		var centerY = kha_System.windowHeight() / 2;
-		var scale = Math.min(centerX,centerY) * 0.9;
-		var _g = 0;
-		var _g1 = this.POINTS;
-		while(_g < _g1) {
-			var i = _g++;
-			var angle = i / (this.POINTS - 1) * Math.PI * 2;
-			this.xs[i] = centerX + Math.cos((angle + this.t) * 2.1) * scale;
-			this.ys[i] = centerY + Math.sin((angle + this.t) * 1.4) * scale;
-		}
 	}
 	,render: function(framebuffers) {
-		var centerX = kha_System.windowWidth() / 2;
-		var centerY = kha_System.windowHeight() / 2;
-		var scale = Math.min(centerX,centerY) * 0.9;
-		var maxLen = scale / 2;
-		var g2 = framebuffers[0].get_g2();
-		g2.begin();
-		var _g = 0;
-		var _g1 = this.POINTS;
-		while(_g < _g1) {
-			var i = _g++;
-			var _g2 = 0;
-			var _g11 = this.POINTS;
-			while(_g2 < _g11) {
-				var j = _g2++;
-				var dx = this.xs[j] - this.xs[i];
-				var dy = this.ys[j] - this.ys[i];
-				var len = dx * dx + dy * dy;
-				if(len < maxLen * maxLen) {
-					var normLen = (maxLen - Math.sqrt(len)) / maxLen;
-					g2.set_color(kha__$Color_Color_$Impl_$.fromFloats(1,1,1,normLen));
-					g2.drawLine(this.xs[i],this.ys[i],this.xs[j],this.ys[j],1);
-				}
-			}
+		this.syncBackbuffer(framebuffers[0]);
+		this.drawGraphics(this.backbuffer.get_g2());
+		this.showBackbuffer(framebuffers[0]);
+	}
+	,drawGraphics: function(graphics) {
+		var halfWidth = 10;
+		graphics.begin(false);
+		graphics.drawRect(this.mouse.x - halfWidth,this.mouse.y - halfWidth,halfWidth * 2,halfWidth * 2,5);
+		graphics.end();
+	}
+	,showBackbuffer: function(screen) {
+		screen.get_g2().begin();
+		kha_Scaler.scale(this.backbuffer,screen,0);
+		screen.get_g2().end();
+	}
+	,syncBackbuffer: function(screen) {
+		if(this.backbuffer.get_width() != screen.get_width() || this.backbuffer.get_height() != screen.get_height()) {
+			this.onResize(screen.get_width(),screen.get_height());
 		}
-		g2.end();
+	}
+	,setMouse: function(x,y,mx,my) {
+		this.mouse.x = x;
+		this.mouse.y = y;
 	}
 	,__class__: App
 };
@@ -170,11 +155,13 @@ var Main = function() { };
 $hxClasses["Main"] = Main;
 Main.__name__ = true;
 Main.main = function() {
-	kha_System.start(new kha_SystemOptions("first app",1366,768,null,new kha_FramebufferOptions(null,null,null,null,null,4)),Main.run);
+	var _g = new kha_FramebufferOptions(null,null,null,null,null,4);
+	kha_System.start(new kha_SystemOptions("first app",1366,768,new kha_WindowOptions(null,null,null,null,null,null,null,null,null),_g),Main.run);
 };
 Main.run = function($window) {
 	kha_Assets.loadEverything(function() {
 		var app = new App();
+		$window.notifyOnResize($bind(app,app.onResize));
 		kha_Scheduler.addTimeTask($bind(app,app.update),0,0.016666666666666666);
 		kha_System.notifyOnFrames($bind(app,app.render));
 		return;
@@ -2883,6 +2870,202 @@ kha_LoaderImpl.loadFontFromDescription = function(desc,done,failed) {
 var kha_Macros = function() { };
 $hxClasses["kha.Macros"] = kha_Macros;
 kha_Macros.__name__ = true;
+var kha_TargetRectangle = function(x,y,w,h,s,r) {
+	this.x = x;
+	this.y = y;
+	this.width = w;
+	this.height = h;
+	this.scaleFactor = s;
+	this.rotation = r;
+};
+$hxClasses["kha.TargetRectangle"] = kha_TargetRectangle;
+kha_TargetRectangle.__name__ = true;
+kha_TargetRectangle.prototype = {
+	x: null
+	,y: null
+	,width: null
+	,height: null
+	,scaleFactor: null
+	,rotation: null
+	,__class__: kha_TargetRectangle
+};
+var kha_Scaler = function() { };
+$hxClasses["kha.Scaler"] = kha_Scaler;
+kha_Scaler.__name__ = true;
+kha_Scaler.targetRect = function(width,height,destinationWidth,destinationHeight,rotation) {
+	var scalex;
+	var scaley;
+	var scalew;
+	var scaleh;
+	var scale;
+	switch(rotation) {
+	case 0:
+		if(width / height > destinationWidth / destinationHeight) {
+			scale = destinationWidth / width;
+			scalew = width * scale;
+			scaleh = height * scale;
+			scalex = 0;
+			scaley = (destinationHeight - scaleh) * 0.5;
+		} else {
+			scale = destinationHeight / height;
+			scalew = width * scale;
+			scaleh = height * scale;
+			scalex = (destinationWidth - scalew) * 0.5;
+			scaley = 0;
+		}
+		break;
+	case 90:
+		if(width / height > destinationHeight / destinationWidth) {
+			scale = destinationHeight / width;
+			scalew = width * scale;
+			scaleh = height * scale;
+			scalex = (destinationWidth - scaleh) * 0.5 + scaleh;
+			scaley = 0;
+		} else {
+			scale = destinationWidth / height;
+			scalew = width * scale;
+			scaleh = height * scale;
+			scalex = scaleh;
+			scaley = (destinationHeight - scalew) * 0.5;
+		}
+		break;
+	case 180:
+		if(width / height > destinationWidth / destinationHeight) {
+			scale = destinationWidth / width;
+			scalew = width * scale;
+			scaleh = height * scale;
+			scalex = scalew;
+			scaley = (destinationHeight - scaleh) * 0.5 + scaleh;
+		} else {
+			scale = destinationHeight / height;
+			scalew = width * scale;
+			scaleh = height * scale;
+			scalex = (destinationWidth - scalew) * 0.5 + scalew;
+			scaley = scaleh;
+		}
+		break;
+	case 270:
+		if(width / height > destinationHeight / destinationWidth) {
+			scale = destinationHeight / width;
+			scalew = width * scale;
+			scaleh = height * scale;
+			scalex = (destinationWidth - scaleh) * 0.5;
+			scaley = scalew;
+		} else {
+			scale = destinationWidth / height;
+			scalew = width * scale;
+			scaleh = height * scale;
+			scalex = 0;
+			scaley = (destinationHeight - scalew) * 0.5 + scalew;
+		}
+		break;
+	}
+	return new kha_TargetRectangle(scalex,scaley,scalew,scaleh,scale,rotation);
+};
+kha_Scaler.transformXDirectly = function(x,y,sourceWidth,sourceHeight,destinationWidth,destinationHeight,rotation) {
+	var targetRect = kha_Scaler.targetRect(sourceWidth,sourceHeight,destinationWidth,destinationHeight,rotation);
+	switch(targetRect.rotation) {
+	case 0:
+		return (x - targetRect.x) / targetRect.scaleFactor | 0;
+	case 90:
+		return (y - targetRect.y) / targetRect.scaleFactor | 0;
+	case 180:
+		return (targetRect.x - x) / targetRect.scaleFactor | 0;
+	case 270:
+		return (targetRect.y - y) / targetRect.scaleFactor | 0;
+	}
+};
+kha_Scaler.transformX = function(x,y,source,destination,rotation) {
+	return kha_Scaler.transformXDirectly(x,y,source.get_width(),source.get_height(),destination.get_width(),destination.get_height(),rotation);
+};
+kha_Scaler.transformYDirectly = function(x,y,sourceWidth,sourceHeight,destinationWidth,destinationHeight,rotation) {
+	var targetRect = kha_Scaler.targetRect(sourceWidth,sourceHeight,destinationWidth,destinationHeight,rotation);
+	switch(targetRect.rotation) {
+	case 0:
+		return (y - targetRect.y) / targetRect.scaleFactor | 0;
+	case 90:
+		return (targetRect.x - x) / targetRect.scaleFactor | 0;
+	case 180:
+		return (targetRect.y - y) / targetRect.scaleFactor | 0;
+	case 270:
+		return (x - targetRect.x) / targetRect.scaleFactor | 0;
+	}
+};
+kha_Scaler.transformY = function(x,y,source,destination,rotation) {
+	return kha_Scaler.transformYDirectly(x,y,source.get_width(),source.get_height(),destination.get_width(),destination.get_height(),rotation);
+};
+kha_Scaler.scale = function(source,destination,rotation) {
+	var g = destination.get_g2();
+	var trans = kha_Scaler.getScaledTransformation(source.get_width(),source.get_height(),destination.get_width(),destination.get_height(),rotation);
+	g.transformationIndex++;
+	if(g.transformationIndex == g.transformations.length) {
+		g.transformations.push(new kha_math_FastMatrix3(1,0,0,0,1,0,0,0,1));
+	}
+	var _this = g.transformations[g.transformationIndex];
+	_this._00 = trans._00;
+	_this._10 = trans._10;
+	_this._20 = trans._20;
+	_this._01 = trans._01;
+	_this._11 = trans._11;
+	_this._21 = trans._21;
+	_this._02 = trans._02;
+	_this._12 = trans._12;
+	_this._22 = trans._22;
+	g.setTransformation(g.transformations[g.transformationIndex]);
+	g.set_color(-1);
+	g.set_opacity(1);
+	g.drawImage(source,0,0);
+	g.popTransformation();
+};
+kha_Scaler.getScaledTransformation = function(width,height,destinationWidth,destinationHeight,rotation) {
+	var rect = kha_Scaler.targetRect(width,height,destinationWidth,destinationHeight,rotation);
+	var sf = rect.scaleFactor;
+	var transformation = new kha_math_FastMatrix3(sf,0,rect.x,0,sf,rect.y,0,0,1);
+	switch(rotation) {
+	case 0:
+		break;
+	case 90:
+		var alpha = Math.PI / 2;
+		var m__00 = Math.cos(alpha);
+		var m__10 = -Math.sin(alpha);
+		var m__20 = 0;
+		var m__01 = Math.sin(alpha);
+		var m__11 = Math.cos(alpha);
+		var m__21 = 0;
+		var m__02 = 0;
+		var m__12 = 0;
+		var m__22 = 1;
+		transformation = new kha_math_FastMatrix3(transformation._00 * m__00 + transformation._10 * m__01 + transformation._20 * m__02,transformation._00 * m__10 + transformation._10 * m__11 + transformation._20 * m__12,transformation._00 * m__20 + transformation._10 * m__21 + transformation._20 * m__22,transformation._01 * m__00 + transformation._11 * m__01 + transformation._21 * m__02,transformation._01 * m__10 + transformation._11 * m__11 + transformation._21 * m__12,transformation._01 * m__20 + transformation._11 * m__21 + transformation._21 * m__22,transformation._02 * m__00 + transformation._12 * m__01 + transformation._22 * m__02,transformation._02 * m__10 + transformation._12 * m__11 + transformation._22 * m__12,transformation._02 * m__20 + transformation._12 * m__21 + transformation._22 * m__22);
+		break;
+	case 180:
+		var alpha1 = Math.PI;
+		var m__001 = Math.cos(alpha1);
+		var m__101 = -Math.sin(alpha1);
+		var m__201 = 0;
+		var m__011 = Math.sin(alpha1);
+		var m__111 = Math.cos(alpha1);
+		var m__211 = 0;
+		var m__021 = 0;
+		var m__121 = 0;
+		var m__221 = 1;
+		transformation = new kha_math_FastMatrix3(transformation._00 * m__001 + transformation._10 * m__011 + transformation._20 * m__021,transformation._00 * m__101 + transformation._10 * m__111 + transformation._20 * m__121,transformation._00 * m__201 + transformation._10 * m__211 + transformation._20 * m__221,transformation._01 * m__001 + transformation._11 * m__011 + transformation._21 * m__021,transformation._01 * m__101 + transformation._11 * m__111 + transformation._21 * m__121,transformation._01 * m__201 + transformation._11 * m__211 + transformation._21 * m__221,transformation._02 * m__001 + transformation._12 * m__011 + transformation._22 * m__021,transformation._02 * m__101 + transformation._12 * m__111 + transformation._22 * m__121,transformation._02 * m__201 + transformation._12 * m__211 + transformation._22 * m__221);
+		break;
+	case 270:
+		var alpha2 = Math.PI * 3 / 2;
+		var m__002 = Math.cos(alpha2);
+		var m__102 = -Math.sin(alpha2);
+		var m__202 = 0;
+		var m__012 = Math.sin(alpha2);
+		var m__112 = Math.cos(alpha2);
+		var m__212 = 0;
+		var m__022 = 0;
+		var m__122 = 0;
+		var m__222 = 1;
+		transformation = new kha_math_FastMatrix3(transformation._00 * m__002 + transformation._10 * m__012 + transformation._20 * m__022,transformation._00 * m__102 + transformation._10 * m__112 + transformation._20 * m__122,transformation._00 * m__202 + transformation._10 * m__212 + transformation._20 * m__222,transformation._01 * m__002 + transformation._11 * m__012 + transformation._21 * m__022,transformation._01 * m__102 + transformation._11 * m__112 + transformation._21 * m__122,transformation._01 * m__202 + transformation._11 * m__212 + transformation._21 * m__222,transformation._02 * m__002 + transformation._12 * m__012 + transformation._22 * m__022,transformation._02 * m__102 + transformation._12 * m__112 + transformation._22 * m__122,transformation._02 * m__202 + transformation._12 * m__212 + transformation._22 * m__222);
+		break;
+	}
+	return transformation;
+};
 var kha_TimeTask = function() {
 };
 $hxClasses["kha.TimeTask"] = kha_TimeTask;

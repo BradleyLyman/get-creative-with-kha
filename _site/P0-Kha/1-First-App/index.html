@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+<title>First App</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta property="og:title" content="First App">
+<meta property="og:type" content="article">
+
+<link rel="manifest" href="site.webmanifest">
+<link rel="apple-touch-icon" href="http://localhost:4000/get-creative-with-khaassets/haxe.png">
+
+<!-- Place favicon.ico in the root directory -->
+
+<meta name="description" content="Creative coding with Haxe and Heaps.io.">
+
+<meta
+  property="og:url"
+  content="http://localhost:4000/get-creative-with-kha/P0-Kha/1-First-App/">
+
+<meta
+  property="og:image"
+  content="http://localhost:4000/get-creative-with-kha/P0-Kha/1-First-App/Screenshot.png">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Open+Sans&family=Rubik&family=Trirong:wght@600&display=swap"
+    rel="stylesheet"
+  >
+  <link rel="stylesheet" href="http://localhost:4000//get-creative-with-kha/css/normalize.css" />
+  <link rel="stylesheet" href="http://localhost:4000//get-creative-with-kha/css/main.css" />
+</head>
+<body>
+  <main id="demo">
+  <header>
+    <nav>
+      <a href="https://github.com/BradLyman/get-creative-with-kha/tree/master/P0-Kha/1-First-App/">
+        [src]
+      </a>
+      <a href="http://localhost:4000/get-creative-with-kha/">
+        [other demos]
+      </a>
+      <a href="#" onClick="toggleFullscreen()">
+        [fullscreen]
+      </a>
+    </nav>
+  </header>
+
+  <canvas id="khanvas"></canvas>
+</main>
+
+<script src="./kha.js" ></script>
+
+<script>
+  function toggleFullscreen() {
+    let canvas = document.getElementById("khanvas");
+    if (canvas.requestFullscreen) {
+      canvas.requestFullscreen();
+    } else if (canvas.mozRequestFullScreen) { /* Firefox */
+      canvas.mozRequestFullScreen();
+    } else if (canvas.webkitRequestFullscreen) { /* Chrome, Safari and Opera */
+      canvas.webkitRequestFullscreen();
+    } else if (canvas.msRequestFullscreen) { /* IE/Edge */
+      canvas.msRequestFullscreen();
+    }
+  }
+
+  (function autoresie() {
+    let canvas = document.getElementById("khanvas");
+    var resize = function() {
+      let w = (window.innerWidth * window.devicePixelRatio);
+      let h = (window.innerHeight * window.devicePixelRatio);
+      canvas.width = w;
+      canvas.height = h;
+      canvas.style.width = document.documentElement.clientWidth + "px";
+      canvas.style.height = document.documentElement.clientHeight + "px";
+    }
+    window.onresize = resize;
+    resize();
+  })();
+</script>
+
+</body>
+</html>

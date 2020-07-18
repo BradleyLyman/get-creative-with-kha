@@ -1,0 +1,73 @@
+
+.demo-index {
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.demo-index__card {
+  padding: 1rem;
+  flex: 0 1 15rem;
+
+  a {
+    position: relative;
+    display: block;
+
+    border-radius: 0.25rem;
+    box-shadow: 0 0.2rem 0.4rem 0 $dark;
+    transition: 0.3s;
+
+    min-width: 16rem;
+    min-height: 9rem;
+
+    overflow: hidden;
+    background-size: cover;
+    background-position: center;
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: black;
+      opacity: 0.3;
+      transition: 0.3s;
+      z-index: 100;
+    }
+
+    footer {
+      position: absolute;
+
+      opacity: 0.0;
+      bottom: -50%;
+      transition: 0.3s;
+
+      width: 100%;
+      height: 25%;
+      z-index: 101;
+
+      background-color: $background-highlight;
+      color: $text-highlight;
+
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    &:hover {
+      &::after {
+        opacity: 0.0;
+      }
+
+      footer {
+        opacity: 0.90;
+        bottom: 0;
+      }
+
+      box-shadow: 0 0.4rem 0.8rem 0 $dark;
+    }
+  }
+}

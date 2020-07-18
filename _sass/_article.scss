@@ -1,0 +1,24 @@
+
+#article {
+  display: block;
+  position: relative;
+
+  margin: auto;
+  padding: 1rem;
+
+  max-width: 70rem;
+
+  header {
+    padding-bottom: 1rem;
+
+    nav {
+      display: flex;
+      flex: row;
+      align-items: baseline;
+    }
+
+    a {
+      text-decoration: none;
+    }
+  }
+}

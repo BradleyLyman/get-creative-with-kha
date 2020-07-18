@@ -1,0 +1,52 @@
+---
+layout: default
+---
+
+<main id="demo">
+  <header>
+    <nav>
+      <a href="https://github.com/BradLyman{{site.baseurl}}/tree/master{{page.url}}">
+        [src]
+      </a>
+      <a href="{{site.url}}{{site.baseurl}}/">
+        [other demos]
+      </a>
+      <a href="#" onClick="toggleFullscreen()">
+        [fullscreen]
+      </a>
+    </nav>
+  </header>
+
+  <canvas id="khanvas"></canvas>
+</main>
+
+<script src="./kha.js" ></script>
+
+<script>
+  function toggleFullscreen() {
+    let canvas = document.getElementById("khanvas");
+    if (canvas.requestFullscreen) {
+      canvas.requestFullscreen();
+    } else if (canvas.mozRequestFullScreen) { /* Firefox */
+      canvas.mozRequestFullScreen();
+    } else if (canvas.webkitRequestFullscreen) { /* Chrome, Safari and Opera */
+      canvas.webkitRequestFullscreen();
+    } else if (canvas.msRequestFullscreen) { /* IE/Edge */
+      canvas.msRequestFullscreen();
+    }
+  }
+
+  (function autoresie() {
+    let canvas = document.getElementById("khanvas");
+    var resize = function() {
+      let w = (window.innerWidth * window.devicePixelRatio);
+      let h = (window.innerHeight * window.devicePixelRatio);
+      canvas.width = w;
+      canvas.height = h;
+      canvas.style.width = document.documentElement.clientWidth + "px";
+      canvas.style.height = document.documentElement.clientHeight + "px";
+    }
+    window.onresize = resize;
+    resize();
+  })();
+</script>

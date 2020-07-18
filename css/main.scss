@@ -1,0 +1,35 @@
+---
+---
+
+@import "colors";
+
+$content-width: 74rem;
+
+html {
+  font-family: 'Rubik', sans-serif;
+}
+
+h1,h2,h3,h4,h5,h6 {
+  font-family: 'Trirong', serif;
+  padding: 0;
+  margin: 0;
+  color: $text;
+}
+
+body {
+  display: block;
+  position: relative;
+
+  color: $text;
+  background-color: $background;
+
+  max-width: 100%;
+  max-height: 100%;
+
+  padding: 0rem;
+  margin: 0rem;
+}
+
+@import "demo.scss";
+@import "article";
+@import "card";

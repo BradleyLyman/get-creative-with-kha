@@ -1,0 +1,30 @@
+/** Solarized colors from https://ethanschoonover.com/solarized/
+**/
+html { font-family: 'Rubik', sans-serif; }
+
+h1, h2, h3, h4, h5, h6 { font-family: 'Trirong', serif; padding: 0; margin: 0; color: #657b83; }
+
+body { display: block; position: relative; color: #657b83; background-color: #fdf6e3; max-width: 100%; max-height: 100%; padding: 0rem; margin: 0rem; }
+
+#demo { overflow: hidden; }
+
+#demo > header { position: absolute; top: 0.25rem; left: 0.25rem; }
+#demo > header nav { display: flex; flex-flow: row wrap; align-items: baseline; justify-content: flex-start; }
+#demo > header a { flex-shrink: 0; padding-left: 1rem; text-decoration: none; color: #586e75; }
+
+#demo > canvas { display: block; width: 10vw; height: 10vh; }
+
+#article { display: block; position: relative; margin: auto; padding: 1rem; max-width: 70rem; }
+#article header { padding-bottom: 1rem; }
+#article header nav { display: flex; flex: row; align-items: baseline; }
+#article header a { text-decoration: none; }
+
+.demo-index { display: flex; flex-flow: row wrap; justify-content: flex-start; align-items: center; }
+
+.demo-index__card { padding: 1rem; flex: 0 1 15rem; }
+.demo-index__card a { position: relative; display: block; border-radius: 0.25rem; box-shadow: 0 0.2rem 0.4rem 0 #002b36; transition: 0.3s; min-width: 16rem; min-height: 9rem; overflow: hidden; background-size: cover; background-position: center; }
+.demo-index__card a::after { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: black; opacity: 0.3; transition: 0.3s; z-index: 100; }
+.demo-index__card a footer { position: absolute; opacity: 0.0; bottom: -50%; transition: 0.3s; width: 100%; height: 25%; z-index: 101; background-color: #eee8d5; color: #586e75; display: flex; justify-content: center; align-items: center; }
+.demo-index__card a:hover { box-shadow: 0 0.4rem 0.8rem 0 #002b36; }
+.demo-index__card a:hover::after { opacity: 0.0; }
+.demo-index__card a:hover footer { opacity: 0.90; bottom: 0; }

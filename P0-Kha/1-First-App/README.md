@@ -1,4 +1,4 @@
-# First App
+# [First App](https://bradlyman.github.io/get-creative-with-kha/P0-Kha/1-First-App/)
 
 A short demonstration for getting Kha initialized and graphics on the screen.
 As a nice bonus, the performance is stellar.

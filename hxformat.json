@@ -1,0 +1,63 @@
+{
+  "wrapping": {
+    "maxLineLength": 80,
+    "functionSignature": {
+      "defaultAdditionalIndent": 0,
+      "defaultWrap": "fillLine",
+      "defaultLocation": "afterLast",
+      "rules": [
+        {
+          "conditions": [{"cond": "lineLength <= n", "value": 79}],
+          "type": "fillLine",
+          "additionalIndent": 0
+        },
+        {
+          "conditions": [{"cond": "lineLength >= n", "value": 80}],
+          "type": "onePerLine",
+          "additionalIndent": 0
+        }
+      ]
+    },
+    "callParameter": {
+      "defaultAdditionalIndent": 0,
+      "defaultWrap": "fillLine",
+      "defaultLocation": "afterLast",
+      "rules": [
+        {
+          "conditions": [{"cond": "lineLength <= n", "value": 79}],
+          "type": "fillLine",
+          "additionalIndent": 0
+        },
+        {
+          "conditions": [{"cond": "lineLength >= n", "value": 80}],
+          "type": "onePerLine",
+          "additionalIndent": 0
+        }
+      ]
+    },
+    "anonFunctionSignature": {
+      "defaultWrap": "keep"
+    }
+  },
+  "lineEnds": {
+    "leftCurly" : "after",
+    "emptyCurly": "noBreak"
+  },
+  "indentation": {
+    "trailingWhitespace": false,
+    "character": "  "
+  },
+  "sameLine": {
+    "functionBody": "keep",
+    "anonFunctionBody": "keep"
+  },
+  "whitespace": {
+    "commaPolicy": "after",
+    "parenConfig": {
+      "funcParamParens": {
+        "openingPolicy": "none",
+        "closingPolicy": "none"
+      }
+    }
+  }
+}

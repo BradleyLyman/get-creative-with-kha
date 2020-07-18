@@ -18,7 +18,10 @@ class App {
   private var backbuffer:Image;
 
   public function new() {
+    // listen for mouse events
     Mouse.get().notify(null, null, setMouse, null);
+
+    // create a backbuffer to target for rendering
     backbuffer = Image.createRenderTarget(
       System.windowWidth(),
       System.windowHeight(),
@@ -26,8 +29,12 @@ class App {
     );
   }
 
+  /**
+    Called when the window is resized. See Main.hx for the setup.
+    This does not get called automatically for html5 targets due to canvas
+    weirdness. (see below)
+  **/
   public function onResize(w:Int, h:Int):Void {
-    trace('resized $w, $h');
     final newBuf = Image.createRenderTarget(w, h, Usage.DynamicUsage);
     Scaler.scale(backbuffer, newBuf, RotationNone);
     backbuffer = newBuf;
@@ -50,6 +57,11 @@ class App {
     showBackbuffer(framebuffers[0]);
   }
 
+  /**
+    Draw a square around the mouse using the provided graphics object.
+    Try switching between the backbuffer and the screen to see how the
+    resulting painting is effected.
+  **/
   private function drawGraphics(graphics:Graphics) {
     final halfWidth = 10;
     graphics.begin(false); // don't clear
@@ -63,6 +75,9 @@ class App {
     graphics.end();
   }
 
+  /**
+    Scale the backbuffer onto the screen.
+  **/
   private function showBackbuffer(screen:Framebuffer) {
     screen.g2.begin();
     Scaler.scale(backbuffer, screen, RotationNone);
@@ -88,6 +103,10 @@ class App {
     }
   }
 
+  /**
+    Handler for the mousecallback. Just update the saved position to be used
+    in render.
+  **/
   private function setMouse(x:Int, y:Int, mx:Int, my:Int) {
     mouse.x = x;
     mouse.y = y;

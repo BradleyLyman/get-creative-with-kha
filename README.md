@@ -1,4 +1,4 @@
-# Get Creative With Kha
+# [Get Creative With Kha (live demo)](https://bradlyman.github.io/get-creative-with-kha/)
 
 Creative coding experiments with the kha multimedia framework.
 

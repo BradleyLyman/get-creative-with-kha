@@ -1,9 +1,9 @@
-# [First App (live demo)](https://bradlyman.github.io/get-creative-with-kha/P0-Kha/1-First-App/)
+# [Zui (live demo)](https://bradlyman.github.io/get-creative-with-kha/P0-Kha/4-zui/)
 
-<img src="https://bradlyman.github.io/get-creative-with-kha/P0-Kha/1-First-App/Screenshot.png" width="300" />
+<img src="https://bradlyman.github.io/get-creative-with-kha/P0-Kha/4-zui/Screenshot.png" width="300" />
 
-A short demonstration for getting Kha initialized and graphics on the screen.
-As a nice bonus, the performance is stellar.
+Show how to use the ZUI library to create onscreen UI elements which control
+the demo's behaviour.
 
 ## How To Build
 

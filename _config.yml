@@ -21,7 +21,7 @@
 title: Get Creative With Heaps.io
 email: lyman.brad3211@gmail.com
 description: >- # this means to ignore newlines until "baseurl:"
-  Creative coding with Haxe and Heaps.io.
+  Creative coding with Haxe and Kha.
 baseurl: "/get-creative-with-kha" # the subpath of your site, e.g. /blog
 url: "https://bradlyman.github.io" # the base hostname & protocol for your site, e.g. http://example.com
 github_username:  BradLyman

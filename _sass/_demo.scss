@@ -6,6 +6,7 @@
 #demo>header {
   position: absolute;
   top: 0.25rem;
+  bottom: auto;
   left: 0.25rem;
 
   nav {
@@ -23,6 +24,7 @@
   }
 }
 
+
 #demo>canvas {
   display: block;
 
@@ -33,3 +35,11 @@
   width: 10vw;
   height: 10vh;
 }
+
+@media (max-width: 700px) {
+  #demo >header {
+    top:auto;
+    bottom: 0.25rem;
+  }
+}
+

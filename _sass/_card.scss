@@ -2,7 +2,7 @@
 .demo-index {
   display: flex;
   flex-flow: row wrap;
-  justify-content: flex-start;
+  justify-content: space-evenly;
   align-items: center;
 }
 
@@ -18,8 +18,8 @@
     box-shadow: 0 0.2rem 0.4rem 0 $dark;
     transition: 0.3s;
 
-    min-width: 16rem;
-    min-height: 9rem;
+    min-width: 10rem;
+    min-height: 10rem;
 
     overflow: hidden;
     background-size: cover;

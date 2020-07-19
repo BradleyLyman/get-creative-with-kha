@@ -1,21 +1,58 @@
 <meta charset="utf-8">
 <title>{{ page.title }}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
-<meta property="og:title" content="{{ page.title }}">
-<meta property="og:type" content="article">
-
 <link rel="manifest" href="site.webmanifest">
-<link rel="apple-touch-icon" href="{{site.url}}{{site.baseurl}}assets/haxe.png">
 
-<!-- Place favicon.ico in the root directory -->
+<!-- icons -->
 
-<meta name="description" content="{{ site.description }}">
+<link
+  rel="apple-touch-icon"
+  href="{{site.url}}{{site.baseurl}}/assets/haxe.png">
+<link
+  rel="icon"
+  href="{{site.url}}{{site.baseurl}}/assets/favicon.ico"
+  type="image/x-icon">
 
+
+<!-- Primary Meta Tags -->
+<meta name="title" content="{{page.title}}">
+{% if page.description != nil and page.description != "" %}
+  <meta name="description" content="{{page.description}}">
+{% else %}
+  <meta name="description" content="{{site.description}}">
+{% endif %}
+
+
+<!-- Open Graph / Facebook -->
+<meta property="og:title" content="{{page.title}}">
+<meta property="og:type" content="website">
 <meta
   property="og:url"
   content="{{site.url}}{{site.baseurl}}{{page.url}}">
-
 <meta
   property="og:image"
   content="{{site.url}}{{site.baseurl}}{{page.url}}Screenshot.png">
+{% if page.description != nil and page.description != "" %}
+  <meta property="og:description" content="{{page.description}}">
+{% else %}
+  <meta property="og:description" content="{{site.description}}">
+{% endif %}
+
+
+<!-- Twitter -->
+<meta property="twitter:title" content="{{page.title}}">
+<meta property="twitter:card" content="summary_large_image">
+<meta
+  property="twitter:url"
+  content="{{site.url}}{{site.baseurl}}{{page.url}}">
+<meta
+  property="twitter:image"
+  content="{{site.url}}{{site.baseurl}}{{page.url}}Screenshot.png">
+<meta
+  property="twitter:description"
+  content="Creative coding with Haxe and Heaps.io.">
+{% if page.description != nil and page.description != "" %}
+  <meta property="twitter:description" content="{{page.description}}">
+{% else %}
+  <meta property="twitter:description" content="{{site.description}}">
+{% endif %}

@@ -1,4 +1,4 @@
-# [Painting (live demo)](https://bradlyman.github.io/get-creative-with-kha/P2-Critters/3-Guided-Movement/)
+# [Guided Movement (live demo)](https://bradlyman.github.io/get-creative-with-kha/P2-Critters/3-Guided-Movement/)
 
 <img src="https://bradlyman.github.io/get-creative-with-kha/P2-Critters/3-Guided-Movement/Screenshot.png" width="300" />
 

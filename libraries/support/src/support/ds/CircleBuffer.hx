@@ -11,13 +11,14 @@ import haxe.ds.Vector;
   It could be faster, it could have more features, but that'll happen when it
   needs to be faster or the features are needed.
 **/
+@:structInit
 class CircleBuffer<T> {
   private var cursor:Int;
   private var buffer:Vector<T>;
 
   public var length(get, null):Int;
 
-  /* Create a new buffer with a fixed length, and all elements initialized */
+  /** Create a new buffer with a fixed length, and all elements initialized **/
   public function new(init:T, maxLen:Int) {
     buffer = new Vector<T>(maxLen);
     cursor = 0;

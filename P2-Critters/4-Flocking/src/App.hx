@@ -1,47 +1,68 @@
 package;
 
+import haxe.Timer;
+import zui.Id;
+import kha.Assets;
+import zui.Themes;
 import kha.math.FastMatrix3;
 import kha.input.Mouse;
 import kha.System;
 import kha.Framebuffer;
+import support.ds.CircleBuffer;
+import zui.Zui;
+
+using support.FloatOps;
 
 class App {
+  private var ui:Zui;
+  private var frameTimes:CircleBuffer<Float> = {init: 0, maxLen: 30};
   private var world:CritterWorld = new CritterWorld(
-    {size: {x: 1000, y: 1000}}
+    {size: {x: 2000, y: 2000}}
   );
 
   public function new() {
+    final theme = Themes.dark;
+    theme.FONT_SIZE = 24;
+    ui = new Zui({font: Assets.fonts.NotoSans_Regular, theme: theme});
     Mouse.get().notify(spawnCritters, null, onMove, null);
   }
 
   public function onMove(x:Int, y:Int, dx:Int, dy:Int) {
     final proj = orthoProjection(System.windowWidth(), System.windowHeight());
     final realMouse = proj.inverse().multvec({x: x, y: y});
-    world.avoid(realMouse);
+    world.seek(realMouse);
   }
 
   public function spawnCritters(_button:Int, x:Int, y:Int) {
-    world.clear();
+    if (world.critters.length > 2000) {
+      return;
+    }
     final proj = orthoProjection(System.windowWidth(), System.windowHeight());
     final realMouse = proj.inverse().multvec({x: x, y: y});
-    for (i in 0...200) {
+    for (i in 0...100) {
       world.spawn(realMouse);
     }
   }
 
   public function update() {
+    final start = Timer.stamp();
     world.integrate();
+    final end = Timer.stamp();
+    frameTimes.push(end - start);
   }
 
   public function render(framebuffers:Array<Framebuffer>):Void {
     final screen = framebuffers[0];
     final g2 = screen.g2;
     g2.begin();
-    g2.transformation = orthoProjection(screen.width, screen.height);
+    g2.pushTransformation(orthoProjection(screen.width, screen.height));
     for (critter in world.critters) {
       critter.draw(g2);
     }
+    g2.popTransformation();
     g2.end();
+
+    drawUi(screen);
   }
 
   /**
@@ -68,5 +89,24 @@ class App {
   **/
   public function setAspect(widthOverHeight:Float) {
     world.settings.size.x = widthOverHeight * world.settings.size.y;
+  }
+
+  private function drawUi(screen:Framebuffer) {
+    final hwin = Id.handle();
+    hwin.redraws = 1;
+    ui.begin(screen.g2);
+    if (ui.window(hwin, screen.width - 300, 0, 300, 800, false)) {
+      ui.text('critters: ${world.critters.length}');
+      ui.text('Avg Frame Time: ${avgFrameTime().fmt()}ms');
+    }
+    ui.end();
+  }
+
+  private function avgFrameTime():Float {
+    var sum:Float = 0;
+    for (time in frameTimes) {
+      sum += time;
+    }
+    return (sum / frameTimes.length) * 1000;
   }
 }

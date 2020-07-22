@@ -34,6 +34,17 @@ class Settings {
   }
 }
 
+interface Index {
+  /**
+    Retrieve all critters within a given distance of a point.
+    @param point the query point
+    @param distance how far away to include critters
+    @return Array<Critter>
+      all critters with the threshold distance from the target
+  **/
+  function nearby(point:FastVector2, distance:Float):Array<Critter>;
+}
+
 /**
   The simulation world for a collection of critters.
 **/
@@ -41,6 +52,7 @@ class Settings {
 class CritterWorld {
   public var settings:Settings;
   public var critters:Array<Critter>;
+  public var index:Index;
 
   /* Create a new critter world. */
   public function new(settings:Settings) {
@@ -53,9 +65,19 @@ class CritterWorld {
     constant for the provided time frame.
   **/
   public function integrate() {
-    final dt = settings.integrationSeconds;
     for (critter in critters) {
       enforceBounds(critter);
+    }
+
+    // index = new BruteForceIndex(critters);
+    index = new BinLatticeIndex(critters, 50, settings.size);
+
+    final dt = settings.integrationSeconds;
+    for (critter in critters) {
+      final nearby = index.nearby(critter.pos, 50);
+      critter.align(nearby, settings.maxVel, settings.maxAccel * 0.75);
+      critter.seekCenter(nearby, 50, settings.maxVel, settings.maxAccel * 0.5);
+      critter.avoidAll(nearby, 25, settings.maxVel, settings.maxAccel);
 
       critter.acc.limit(settings.maxAccel);
       critter.vel = critter.vel.add(critter.acc.mult(dt));
@@ -65,9 +87,9 @@ class CritterWorld {
     }
   }
 
-  public function avoid(point:FastVector2) {
+  public function seek(point:FastVector2) {
     for (critter in critters) {
-      critter.avoid(point, 100, settings.maxVel / 2, settings.maxAccel);
+      critter.seek(point, 50, settings.maxVel / 2, settings.maxAccel / 2);
     }
   }
 

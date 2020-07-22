@@ -106,4 +106,89 @@ class Critter {
     final seekVelocity = direction.mult(repulseSpeed / length);
     steer(seekVelocity, force);
   }
+
+  /**
+    A specialized avoid function which gives good behavior when trying to
+    avoid lots of nearby targets.
+    @param targets A set of critters which this critter will try to avoid.
+    @param repulseThreshold
+      outside this radius the critter will not experience any force
+    @param repulseSpeed
+      the maximum speed the critter will attempt to reach while fleeing the
+      target
+    @param force how hard the critter will push to reach the repulse speed
+  **/
+  public function avoidAll(
+    targets:Array<Critter>,
+    repulseThreshold:Float,
+    repulseSpeed:Float,
+    force:Float
+  ) {
+    var targetsAvoided:Int = 0;
+    var runDirection:FastVector2 = {x: 0, y: 0};
+    for (target in targets) {
+      final diff = pos.sub(target.pos);
+      final dist = diff.length;
+      if (dist > repulseThreshold || dist == 0) {
+        continue;
+      }
+      runDirection = runDirection.add(diff.div(dist));
+      targetsAvoided += 1;
+    }
+    if (targetsAvoided > 0) {
+      final averageDirection = runDirection.div(targetsAvoided);
+      final targetVelocity = averageDirection.normalized().mult(repulseSpeed);
+      steer(targetVelocity, force);
+    }
+  }
+
+  /**
+    Seek the center of mass of all of the included targets.
+    @param targets
+      a set of critters which this critter will try to center itself within
+    @param approachThreshold
+      the distance within which the critter will slow while it approaches the
+      center
+    @param approachSpeed
+      the maximum speed the critter will attempt to reach while seeking the
+      center
+    @param force how hard the critter will push to reach the attraction speed
+  **/
+  public function seekCenter(
+    targets:Array<Critter>,
+    approachThreshold:Float,
+    approachSpeed:Float,
+    force:Float
+  ) {
+    var targetsSought = 0;
+    var sum:FastVector2 = {x: 0, y: 0};
+    for (target in targets) {
+      if (target == this) {
+        continue;
+      }
+      targetsSought += 1;
+      sum = sum.add(target.pos);
+    }
+    if (targetsSought > 0) {
+      final center = sum.div(targetsSought);
+      seek(center, approachThreshold, approachSpeed, force);
+    }
+  }
+
+  public function align(
+    targets:Array<Critter>,
+    alignedSpeed:Float,
+    force:Float
+  ) {
+    if (targets.length == 0) {
+      return;
+    }
+    var totalVel:FastVector2 = {x: 0, y: 0};
+    for (target in targets) {
+      totalVel = totalVel.add(target.vel);
+    }
+    final avgVel = totalVel.div(targets.length);
+    final targetVel = avgVel.normalized().mult(alignedSpeed);
+    steer(targetVel, force);
+  }
 }

@@ -328,9 +328,17 @@ BinLatticeIndex.prototype = {
 			++_g3;
 			var col1 = section[0];
 			var row1 = section[1];
-			critters = critters.concat(this.bins[col1 + row1 * this.cols]);
+			this.addAll(critters,this.bins[col1 + row1 * this.cols]);
 		}
 		return critters;
+	}
+	,addAll: function(critters,others) {
+		var _g = 0;
+		while(_g < others.length) {
+			var other = others[_g];
+			++_g;
+			critters.push(other);
+		}
 	}
 	,__class__: BinLatticeIndex
 };

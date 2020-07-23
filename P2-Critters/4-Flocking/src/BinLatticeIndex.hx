@@ -8,10 +8,10 @@ typedef Critters = Array<Critter>;
 
 class BinLatticeIndex implements CritterWorld.Index {
   final resolution:Float;
-  final cells:Array<Array<Critters>>;
-  final rows:Int;
-  final cols:Int;
-  final size:FastVector2;
+  final cells:Array<Critters>;
+  var rows:Int;
+  var cols:Int;
+  var size:FastVector2;
 
   public function new(critters:Critters, resolution:Float, size:FastVector2) {
     this.resolution = resolution;
@@ -20,18 +20,37 @@ class BinLatticeIndex implements CritterWorld.Index {
 
     this.cols = (size.x / resolution).ceil() + 1;
     this.rows = (size.y / resolution).ceil() + 1;
-    for (c in 0...cols) {
+    for (c in 0...(cols * rows)) {
       this.cells.push([]);
-      for (r in 0...rows) {
-        cells[c].push([]);
-      }
     }
 
     for (critter in critters) {
       final pos = critter.pos.add(size.div(2)); // positive coords
       final snapX = (pos.x / resolution).round();
       final snapY = (pos.y / resolution).round();
-      cells[snapX][snapY].push(critter);
+      cells[snapX + snapY * rows].push(critter);
+    }
+  }
+
+  public function resize(size:FastVector2) {
+    this.cols = (size.x / resolution).ceil() + 1;
+    this.rows = (size.y / resolution).ceil() + 1;
+    cells.resize(cols * rows);
+    for (i in 0...cells.length) {
+      if (cells[i] == null) {
+        cells[i] = [];
+      } else {
+        cells[i].resize(0);
+      }
+    }
+  }
+
+  public function resetCritters(critters:Critters) {
+    for (critter in critters) {
+      final pos = critter.pos.add(size.div(2)); // positive coords
+      final snapX = (pos.x / resolution).round();
+      final snapY = (pos.y / resolution).round();
+      cells[snapX + snapY * rows].push(critter);
     }
   }
 
@@ -69,14 +88,14 @@ class BinLatticeIndex implements CritterWorld.Index {
       [col + 1, row + 1], // bottom right
     ];
     final reduced = coords.filter((a) -> {
-      return (a[0] > 0 && a[1] > 0) && (a[0] < cols && a[1] < rows);
+      return (a[0] >= 0 && a[1] >= 0) && (a[0] < cols && a[1] < rows);
     });
 
     var critters:Array<Critter> = [];
     for (section in reduced) {
       final col = section[0];
       final row = section[1];
-      critters = critters.concat(cells[col][row]);
+      critters = critters.concat(cells[col + row * rows]);
     }
     return critters;
   }

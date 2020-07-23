@@ -54,10 +54,14 @@ class CritterWorld {
   public var critters:Array<Critter>;
   public var index:Index;
 
+  private var blIndex:BinLatticeIndex;
+
   /* Create a new critter world. */
   public function new(settings:Settings) {
     this.settings = settings;
     critters = [];
+    blIndex = new BinLatticeIndex([], 50, settings.size);
+    index = blIndex;
   }
 
   /**
@@ -70,14 +74,16 @@ class CritterWorld {
     }
 
     // index = new BruteForceIndex(critters);
-    index = new BinLatticeIndex(critters, 50, settings.size);
+    // index = new BinLatticeIndex(critters, 50, settings.size);
+    blIndex.resize(settings.size);
+    blIndex.resetCritters(critters);
 
     final dt = settings.integrationSeconds;
     for (critter in critters) {
       final nearby = index.nearby(critter.pos, 50);
       critter.align(nearby, settings.maxVel, settings.maxAccel * 0.75);
       critter.seekCenter(nearby, 50, settings.maxVel, settings.maxAccel * 0.5);
-      critter.avoidAll(nearby, 25, settings.maxVel, settings.maxAccel);
+      critter.avoidAll(nearby, 35, settings.maxVel, settings.maxAccel);
 
       critter.acc.limit(settings.maxAccel);
       critter.vel = critter.vel.add(critter.acc.mult(dt));

@@ -95,8 +95,14 @@ class BinLatticeIndex implements CritterWorld.Index {
     for (section in reduced) {
       final col = section[0];
       final row = section[1];
-      critters = critters.concat(bins[col + row * cols]);
+      addAll(critters, bins[col + row * cols]);
     }
     return critters;
+  }
+
+  private function addAll(critters:Critters, others:Critters) {
+    for (other in others) {
+      critters.push(other);
+    }
   }
 }

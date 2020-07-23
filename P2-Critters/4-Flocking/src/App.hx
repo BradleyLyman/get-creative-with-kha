@@ -34,6 +34,9 @@ class App {
   }
 
   public function spawnCritters(_button:Int, x:Int, y:Int) {
+    if (world.critters.length > 2500) {
+      return;
+    }
     final proj = orthoProjection(System.windowWidth(), System.windowHeight());
     final realMouse = proj.inverse().multvec({x: x, y: y});
     for (i in 0...100) {

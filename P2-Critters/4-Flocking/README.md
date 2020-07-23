@@ -1,6 +1,6 @@
-# [Hello Critter (live demo)](https://bradlyman.github.io/get-creative-with-kha/P2-Critters/1-Hello-Critter/)
+# [Flocking (live demo)](https://bradlyman.github.io/get-creative-with-kha/P2-Critters/4-Flocking/)
 
-<img src="https://bradlyman.github.io/get-creative-with-kha/P2-Critters/1-Hello-Critter/Screenshot.png" width="300" />
+<img src="https://bradlyman.github.io/get-creative-with-kha/P2-Critters/4-Flocking/Screenshot.png" width="300" />
 
 The 'hello world' of agents using the g2 graphics api layer to render agents as
 a tiny triangle.

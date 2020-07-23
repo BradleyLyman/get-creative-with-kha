@@ -3,6 +3,14 @@ package;
 import kha.math.FastVector2;
 import CritterWorld.Index;
 
+/**
+  This index does no preprocessing on the critter array and therefore each
+  query requires checking every critter.
+
+  It is included as a demonstration of how simple the concept of the index is,
+  but it makes the full simulation's execution speed scale like
+  O(critters.length * critters.length).
+**/
 class BruteForceIndex implements Index {
   final critters:Array<Critter>;
 

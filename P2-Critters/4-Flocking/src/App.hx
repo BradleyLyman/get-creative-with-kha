@@ -13,6 +13,11 @@ import zui.Zui;
 
 using support.FloatOps;
 
+/**
+  The application class is responsible for presenting the critter world by
+  drawing each of the critters on screen. It is also responsible for handling
+  user input to interact with critters.
+**/
 class App {
   private var ui:Zui;
   private var frameTimes:CircleBuffer<Float> = {init: 0, maxLen: 30};
@@ -27,12 +32,18 @@ class App {
     Mouse.get().notify(spawnCritters, null, onMove, null);
   }
 
+  /** Critters chase the mouse when it moves. **/
   public function onMove(x:Int, y:Int, dx:Int, dy:Int) {
     final proj = orthoProjection(System.windowWidth(), System.windowHeight());
     final realMouse = proj.inverse().multvec({x: x, y: y});
     world.seek(realMouse);
   }
 
+  /**
+    Spawn more critters when the mouse is clicked. Arbitrarily stop when there
+    are more than 2500 critters. The experience becomes pretty bad if there are
+    more than about 3000 critters, but could be improved with optimizations.
+  **/
   public function spawnCritters(_button:Int, x:Int, y:Int) {
     if (world.critters.length > 2500) {
       return;
@@ -44,6 +55,7 @@ class App {
     }
   }
 
+  /** Ask the world to integrate and record the time it took. **/
   public function update() {
     final start = Timer.stamp();
     world.integrate();
@@ -51,6 +63,7 @@ class App {
     frameTimes.push(end - start);
   }
 
+  /** Render the critters and the ui **/
   public function render(framebuffers:Array<Framebuffer>):Void {
     final screen = framebuffers[0];
     final g2 = screen.g2;

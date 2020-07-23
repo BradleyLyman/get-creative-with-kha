@@ -4,6 +4,17 @@ import kha.math.FastVector2;
 using support.FloatOps;
 using support.VecOps;
 
+/**
+  A critter is a stateful agent which knows how to render itself.
+  Critters track their own position, velocity, and acceleration, and provide
+  methods which adjust these properties to make the critter seek a point,
+  avoid neighbors, and other interesting behavior.
+
+  Flocking is the combination of the three behaviors:
+   - align
+   - avoidAll
+   - seekCenter
+**/
 @:structInit
 class Critter {
   public var pos:FastVector2;
@@ -175,6 +186,10 @@ class Critter {
     }
   }
 
+  /**
+    Compute the average velocity of all targets, then steer this critter's
+    velocity to be aligned with the average.
+  **/
   public function align(
     targets:Array<Critter>,
     alignedSpeed:Float,

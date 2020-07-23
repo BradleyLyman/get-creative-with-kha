@@ -34,6 +34,9 @@ class Settings {
   }
 }
 
+/**
+  A critter world index enables a nearest-neighbor query to find critters.
+**/
 interface Index {
   /**
     Retrieve all critters within a given distance of a point.
@@ -52,7 +55,6 @@ interface Index {
 class CritterWorld {
   public var settings:Settings;
   public var critters:Array<Critter>;
-  public var index:Index;
 
   private var blIndex:BinLatticeIndex;
 
@@ -61,7 +63,6 @@ class CritterWorld {
     this.settings = settings;
     critters = [];
     blIndex = new BinLatticeIndex([], 50, settings.size);
-    index = blIndex;
   }
 
   /**
@@ -73,10 +74,7 @@ class CritterWorld {
       enforceBounds(critter);
     }
 
-    // index = new BruteForceIndex(critters);
-    // index = new BinLatticeIndex(critters, 50, settings.size);
-    blIndex.resize(settings.size);
-    blIndex.resetCritters(critters);
+    final index = buildIndex();
 
     final dt = settings.integrationSeconds;
     for (critter in critters) {
@@ -91,6 +89,24 @@ class CritterWorld {
       critter.pos = critter.pos.add(critter.vel.mult(dt));
       critter.acc = critter.acc.mult(0.0);
     }
+  }
+
+  private function buildIndex():Index {
+    // switch with this line to see the proof of concept index
+    // performance degrades with the square of the number of critters
+    // return new BruteForceIndex(critters);
+
+    // switch to this line to see the simplest implementation for the bin
+    // lattice index. Creating it each frame introduces GC churn which will
+    // cause periodic stuttering
+    // return new BinLatticeIndex(critters, 50, settings.size);
+
+    // Reuse the binlattice index, rather than replace it. This allows internal
+    // buffers to be resized instead of replaced and should (hopefully) have
+    // less GC overhead.
+    blIndex.resize(settings.size);
+    blIndex.resetCritters(critters);
+    return blIndex;
   }
 
   public function seek(point:FastVector2) {

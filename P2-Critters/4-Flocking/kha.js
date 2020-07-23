@@ -193,68 +193,32 @@ Index.prototype = {
 };
 var BinLatticeIndex = function(critters,resolution,size) {
 	this.resolution = resolution;
-	this.cells = [];
+	this.bins = [];
 	this.size = size;
-	this.cols = Math.ceil(size.x / resolution) + 1;
-	this.rows = Math.ceil(size.y / resolution) + 1;
-	var _g = 0;
-	var _g1 = this.cols * this.rows;
-	while(_g < _g1) {
-		var c = _g++;
-		this.cells.push([]);
-	}
-	var _g2 = 0;
-	while(_g2 < critters.length) {
-		var critter = critters[_g2];
-		++_g2;
-		var _this = critter.pos;
-		var value = 0.5;
-		var x = size.x * value;
-		var y = size.y * value;
-		if(y == null) {
-			y = 0;
-		}
-		if(x == null) {
-			x = 0;
-		}
-		var vec_x = x;
-		var vec_y = y;
-		var x1 = _this.x + vec_x;
-		var y1 = _this.y + vec_y;
-		if(y1 == null) {
-			y1 = 0;
-		}
-		if(x1 == null) {
-			x1 = 0;
-		}
-		var pos_x = x1;
-		var pos_y = y1;
-		var snapX = Math.round(pos_x / resolution);
-		var snapY = Math.round(pos_y / resolution);
-		this.cells[snapX + snapY * this.rows].push(critter);
-	}
+	this.resize(size);
+	this.resetCritters(critters);
 };
 $hxClasses["BinLatticeIndex"] = BinLatticeIndex;
 BinLatticeIndex.__name__ = true;
 BinLatticeIndex.__interfaces__ = [Index];
 BinLatticeIndex.prototype = {
 	resolution: null
-	,cells: null
+	,bins: null
 	,rows: null
 	,cols: null
 	,size: null
 	,resize: function(size) {
 		this.cols = Math.ceil(size.x / this.resolution) + 1;
 		this.rows = Math.ceil(size.y / this.resolution) + 1;
-		this.cells.length = this.cols * this.rows;
+		this.bins.length = this.cols * this.rows;
 		var _g = 0;
-		var _g1 = this.cells.length;
+		var _g1 = this.bins.length;
 		while(_g < _g1) {
 			var i = _g++;
-			if(this.cells[i] == null) {
-				this.cells[i] = [];
+			if(this.bins[i] == null) {
+				this.bins[i] = [];
 			} else {
-				this.cells[i].length = 0;
+				this.bins[i].length = 0;
 			}
 		}
 	}
@@ -286,9 +250,9 @@ BinLatticeIndex.prototype = {
 			}
 			var pos_x = x1;
 			var pos_y = y1;
-			var snapX = Math.round(pos_x / this.resolution);
-			var snapY = Math.round(pos_y / this.resolution);
-			this.cells[snapX + snapY * this.rows].push(critter);
+			var snapX = Math.floor(pos_x / this.resolution);
+			var snapY = Math.floor(pos_y / this.resolution);
+			this.bins[snapX + snapY * this.cols].push(critter);
 		}
 	}
 	,nearby: function(point,distance) {
@@ -364,7 +328,7 @@ BinLatticeIndex.prototype = {
 			++_g3;
 			var col1 = section[0];
 			var row1 = section[1];
-			critters = critters.concat(this.cells[col1 + row1 * this.rows]);
+			critters = critters.concat(this.bins[col1 + row1 * this.cols]);
 		}
 		return critters;
 	}
@@ -749,14 +713,12 @@ var CritterWorld = function(settings) {
 	this.settings = settings;
 	this.critters = [];
 	this.blIndex = new BinLatticeIndex([],50,settings.size);
-	this.index = this.blIndex;
 };
 $hxClasses["CritterWorld"] = CritterWorld;
 CritterWorld.__name__ = true;
 CritterWorld.prototype = {
 	settings: null
 	,critters: null
-	,index: null
 	,blIndex: null
 	,integrate: function() {
 		var _g = 0;
@@ -766,15 +728,14 @@ CritterWorld.prototype = {
 			++_g;
 			this.enforceBounds(critter);
 		}
-		this.blIndex.resize(this.settings.size);
-		this.blIndex.resetCritters(this.critters);
+		var index = this.buildIndex();
 		var dt = this.settings.integrationSeconds;
 		var _g2 = 0;
 		var _g3 = this.critters;
 		while(_g2 < _g3.length) {
 			var critter1 = _g3[_g2];
 			++_g2;
-			var nearby = this.index.nearby(critter1.pos,50);
+			var nearby = index.nearby(critter1.pos,50);
 			critter1.align(nearby,this.settings.maxVel,this.settings.maxAccel * 0.75);
 			critter1.seekCenter(nearby,50,this.settings.maxVel,this.settings.maxAccel * 0.5);
 			critter1.avoidAll(nearby,35,this.settings.maxVel,this.settings.maxAccel);
@@ -827,6 +788,11 @@ CritterWorld.prototype = {
 			var _this4 = critter1.acc;
 			critter1.acc = new kha_math_FastVector2(_this4.x * 0.0,_this4.y * 0.0);
 		}
+	}
+	,buildIndex: function() {
+		this.blIndex.resize(this.settings.size);
+		this.blIndex.resetCritters(this.critters);
+		return this.blIndex;
 	}
 	,seek: function(point) {
 		var _g = 0;

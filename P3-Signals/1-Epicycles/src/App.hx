@@ -10,11 +10,11 @@ class App {
   var cycles:Array<Epicycle> = [];
 
   public function new() {
-    for (i in 1...20) {
+    for (i in 1...5) {
       cycles.push({
-        phase: (i / 20).lerp(0, Math.PI * 2),
+        phase: (i / 5).lerp(0, Math.PI * 2),
         offset: Math.random() * i,
-        amplitude: i * 2
+        amplitude: i * 10
       });
     }
     cycles.sort((a, b) -> Math.round(b.amplitude - a.amplitude));

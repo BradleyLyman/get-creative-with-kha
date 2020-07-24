@@ -12,7 +12,7 @@ function $extend(from, fields) {
 var App = function() {
 	this.frameTimes = new support_ds_CircleBuffer(0,30);
 	this.needsRespawn = true;
-	this.critterCount = 1000;
+	this.critterCount = 500;
 	this.world = new CritterWorld(new Settings(new kha_math_FastVector2(2000,2000),null,null,null));
 	this.maxCritters = 7000;
 	this.minDimSize = 2000;
@@ -1345,7 +1345,7 @@ Repulser.prototype = {
 	,maxRadius: null
 	,activeDuration: null
 	,radius: function() {
-		var t = this.activeDuration / 3;
+		var t = this.activeDuration * 2;
 		var t1 = t < 0 ? 0 : t > 1 ? 1 : t;
 		return (1.0 - t1) * 0 + t1 * this.maxRadius;
 	}

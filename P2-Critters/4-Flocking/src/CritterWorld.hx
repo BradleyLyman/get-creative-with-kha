@@ -42,10 +42,11 @@ interface Index {
     Retrieve all critters within a given distance of a point.
     @param point the query point
     @param distance how far away to include critters
-    @return Array<Critter>
-      all critters with the threshold distance from the target
+    @param out Array<Critter>
+      all critters with the threshold distance from the target are pushed into
+      this array
   **/
-  function nearby(point:FastVector2, distance:Float):Array<Critter>;
+  function nearby(point:FastVector2, distance:Float, out:Array<Critter>):Void;
 }
 
 /**
@@ -56,13 +57,13 @@ class CritterWorld {
   public var settings:Settings;
   public var critters:Array<Critter>;
 
-  private var blIndex:BinLatticeIndex;
+  private var binLatticeIndex:BinLatticeIndex;
 
   /* Create a new critter world. */
   public function new(settings:Settings) {
     this.settings = settings;
     critters = [];
-    blIndex = new BinLatticeIndex([], 50, settings.size);
+    binLatticeIndex = new BinLatticeIndex(50);
   }
 
   /**
@@ -77,12 +78,19 @@ class CritterWorld {
     final index = buildIndex();
 
     final dt = settings.integrationSeconds;
+    final nearby:Array<Critter> = [];
     for (critter in critters) {
-      final nearby = index.nearby(critter.pos, 50);
+      // lookup all critters within 50 units of this one
+      nearby.resize(0); // reuse the nearby array to lessen GC pressure
+      index.nearby(critter.pos, 50, nearby);
+
+      // Apply the flocking algorithm forces radii and multipliers are
+      // arbitrarily chosen based on what looks good
       critter.align(nearby, settings.maxVel, settings.maxAccel * 0.75);
       critter.seekCenter(nearby, 50, settings.maxVel, settings.maxAccel * 0.5);
       critter.avoidAll(nearby, 35, settings.maxVel, settings.maxAccel);
 
+      // kinematic integration (euler's method)
       critter.acc.limit(settings.maxAccel);
       critter.vel = critter.vel.add(critter.acc.mult(dt));
       critter.vel.limit(settings.maxVel);
@@ -104,15 +112,8 @@ class CritterWorld {
     // Reuse the binlattice index, rather than replace it. This allows internal
     // buffers to be resized instead of replaced and should (hopefully) have
     // less GC overhead.
-    blIndex.resize(settings.size);
-    blIndex.resetCritters(critters);
-    return blIndex;
-  }
-
-  public function seek(point:FastVector2) {
-    for (critter in critters) {
-      critter.seek(point, 50, settings.maxVel / 2, settings.maxAccel / 2);
-    }
+    binLatticeIndex.flush(critters, settings.size);
+    return binLatticeIndex;
   }
 
   /**
@@ -139,22 +140,34 @@ class CritterWorld {
   }
 
   /**
-    Spawn a single critter at the specified point with a random velocity.
+    Make all of the critters in the world flee from a single point in the
+    world.
   **/
-  public function spawn(at:FastVector2) {
-    critters.push({
-      pos: at,
-      vel: {
-        x: Math.random().lerp(-settings.maxVel, settings.maxVel),
-        y: Math.random().lerp(-settings.maxVel, settings.maxVel)
-      }
-    });
+  public function avoid(point:FastVector2) {
+    for (critter in critters) {
+      critter.avoid(point, 200, settings.maxVel, settings.maxAccel);
+    }
   }
 
   /**
-    Clear all critters from the world.
+    Spawn n critters at random positions and velocities within the world.
+    @param N the number of critters to spawn
   **/
-  public function clear() {
-    critters.resize(0);
+  public function respawn(N:Int) {
+    critters.resize(0); // empty the world
+
+    // spawn the critters
+    for (_ in 0...N) {
+      critters.push({
+        pos: {
+          x: Math.random().lerp(-settings.size.x / 2, settings.size.x / 2),
+          y: Math.random().lerp(-settings.size.y / 2, settings.size.y / 2)
+        },
+        vel: {
+          x: Math.random().lerp(-settings.maxVel, settings.maxVel),
+          y: Math.random().lerp(-settings.maxVel, settings.maxVel)
+        }
+      });
+    }
   }
 }

@@ -22,13 +22,21 @@ class BruteForceIndex implements Index {
     Retrieve all critters within a given distance of a point.
     @param point the query point
     @param distance how far away to include critters
-    @return Array<Critter>
+    @param out Array<Critter>
       all critters with the threshold distance from the target
   **/
-  public function nearby(point:FastVector2, distance:Float):Array<Critter> {
+  public function nearby(
+    point:FastVector2,
+    distance:Float,
+    out:Array<Critter>
+  ) {
     function isNearby(critter:Critter):Bool {
       return critter.pos.sub(point).length <= distance;
     }
-    return critters.filter(isNearby);
+    for (critter in critters) {
+      if (isNearby(critter)) {
+        out.push(critter);
+      }
+    }
   }
 }

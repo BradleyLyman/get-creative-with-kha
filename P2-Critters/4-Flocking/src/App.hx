@@ -1,5 +1,6 @@
 package;
 
+import kha.math.FastVector2;
 import haxe.Timer;
 import zui.Id;
 import kha.Assets;
@@ -11,6 +12,7 @@ import kha.Framebuffer;
 import support.ds.CircleBuffer;
 import zui.Zui;
 
+using Math;
 using support.FloatOps;
 
 /**
@@ -19,45 +21,50 @@ using support.FloatOps;
   user input to interact with critters.
 **/
 class App {
+  private var world:CritterWorld = new CritterWorld(
+    {size: {x: 1500, y: 1500}}
+  );
+
+  private var pressed:Bool;
+  private var pressedAt:FastVector2;
   private var ui:Zui;
   private var frameTimes:CircleBuffer<Float> = {init: 0, maxLen: 30};
-  private var world:CritterWorld = new CritterWorld(
-    {size: {x: 2000, y: 2000}}
-  );
 
   public function new() {
     final theme = Themes.dark;
     theme.FONT_SIZE = 24;
     ui = new Zui({font: Assets.fonts.NotoSans_Regular, theme: theme});
-    Mouse.get().notify(spawnCritters, null, onMove, null);
+    Mouse.get().notify(onClick, onRelease, onMove, null);
+    world.respawn(1000);
   }
 
-  /** Critters chase the mouse when it moves. **/
+  /** Critters chase the mouse when it's clicked **/
+  public function onClick(_button:Int, x:Int, y:Int) {
+    final proj = orthoProjection(System.windowWidth(), System.windowHeight());
+    pressedAt = proj.inverse().multvec({x: x, y: y});
+    pressed = true;
+  }
+
+  public function onRelease(_button:Int, x:Int, y:Int) {
+    pressed = false;
+  }
+
   public function onMove(x:Int, y:Int, dx:Int, dy:Int) {
-    final proj = orthoProjection(System.windowWidth(), System.windowHeight());
-    final realMouse = proj.inverse().multvec({x: x, y: y});
-    world.seek(realMouse);
-  }
-
-  /**
-    Spawn more critters when the mouse is clicked. Arbitrarily stop when there
-    are more than 2500 critters. The experience becomes pretty bad if there are
-    more than about 3000 critters, but could be improved with optimizations.
-  **/
-  public function spawnCritters(_button:Int, x:Int, y:Int) {
-    if (world.critters.length > 2500) {
-      return;
-    }
-    final proj = orthoProjection(System.windowWidth(), System.windowHeight());
-    final realMouse = proj.inverse().multvec({x: x, y: y});
-    for (i in 0...100) {
-      world.spawn(realMouse);
+    if (pressed) {
+      final proj = orthoProjection(
+        System.windowWidth(),
+        System.windowHeight()
+      );
+      pressedAt = proj.inverse().multvec({x: x, y: y});
     }
   }
 
   /** Ask the world to integrate and record the time it took. **/
   public function update() {
     final start = Timer.stamp();
+    if (pressed) {
+      world.avoid(pressedAt);
+    }
     world.integrate();
     final end = Timer.stamp();
     frameTimes.push(end - start);
@@ -109,8 +116,18 @@ class App {
     hwin.redraws = 1;
     ui.begin(screen.g2);
     if (ui.window(hwin, screen.width - 300, 0, 300, 800, false)) {
-      ui.text('critters: ${world.critters.length}');
       ui.text('Avg Frame Time: ${avgFrameTime().fmt()}ms');
+      if (ui.panel(Id.handle(), "critters")) {
+        final sliderValue = ui.slider(
+          Id.handle({value: world.critters.length}),
+          "critter",
+          50,
+          7000
+        );
+        if (ui.button("Respawn")) {
+          world.respawn(sliderValue.round());
+        }
+      }
     }
     ui.end();
   }

@@ -35,18 +35,24 @@ class Critter {
     Draw the critter to the screen.
   **/
   public function draw(g2:Graphics, size:Float = 10) {
-    final up:FastVector2 = {x: 0, y: 1};
-    final look:FastVector2 = vel.sqrLen() != 0 ? vel.normalized() : up;
-    final look90:FastVector2 = {x: -look.y, y: look.x};
+    var lookX:Float = 0;
+    var lookY:Float = 1;
+    if (vel.sqrLen() != 0) {
+      final len = vel.length;
+      lookX = vel.x / len;
+      lookY = vel.y / len;
+    }
 
-    final left = pos.add(look90.mult(size * 0.25));
-    final right = pos.sub(look90.mult(size * 0.25));
-    final front = pos.add(look.mult(size));
-    final strength = 3;
+    final leftX = pos.x - lookY * size * 0.25;
+    final leftY = pos.y + lookX * size * 0.25;
 
-    g2.drawLine(left.x, left.y, right.x, right.y, strength);
-    g2.drawLine(right.x, right.y, front.x, front.y, strength);
-    g2.drawLine(front.x, front.y, left.x, left.y, strength);
+    final rightX = pos.x + lookY * size * 0.25;
+    final rightY = pos.y - lookX * size * 0.25;
+
+    final frontX = pos.x + lookX * size;
+    final frontY = pos.y + lookY * size;
+
+    g2.fillTriangle(leftX, leftY, rightX, rightY, frontX, frontY);
   }
 
   /**
@@ -56,10 +62,11 @@ class Critter {
     @param force How hard the critter will try to adjust it's velocity to match
                  the desired velocity.
   **/
-  public function steer(desiredVel:FastVector2, force:Float) {
+  public inline function steer(desiredVel:FastVector2, force:Float) {
     final delta = desiredVel.sub(vel);
     final adjusted = delta.normalized().mult(force);
-    acc = acc.add(adjusted);
+    acc.x += adjusted.x;
+    acc.y += adjusted.y;
   }
 
   /**
@@ -75,17 +82,21 @@ class Critter {
     @param force
       how hard the critter will push to try and reach the approachSpeed
   **/
-  public function seek(
+  public inline function seek(
     target:FastVector2,
     approachThreshold:Float,
     approachSpeed:Float,
     force:Float
   ) {
     final direction = target.sub(pos); // point from position toward the target
-    final normDist:Float = direction.length / approachThreshold;
+    final length = direction.length;
+    if (length == 0) {
+      return;
+    }
+    final normDist:Float = length / approachThreshold;
     final clampedDist = normDist.clamp(0, 1);
     final seekSpeed = clampedDist.lerp(0, approachSpeed);
-    final seekVelocity = direction.normalized().mult(seekSpeed);
+    final seekVelocity = direction.mult(seekSpeed / length);
     steer(seekVelocity, force);
   }
 
@@ -143,7 +154,8 @@ class Critter {
       if (dist > repulseThreshold || dist == 0) {
         continue;
       }
-      runDirection = runDirection.add(diff.div(dist));
+      runDirection.x += diff.x / dist;
+      runDirection.y += diff.y / dist;
       targetsAvoided += 1;
     }
     if (targetsAvoided > 0) {
@@ -178,7 +190,8 @@ class Critter {
         continue;
       }
       targetsSought += 1;
-      sum = sum.add(target.pos);
+      sum.x += target.pos.x;
+      sum.y += target.pos.y;
     }
     if (targetsSought > 0) {
       final center = sum.div(targetsSought);
@@ -200,7 +213,8 @@ class Critter {
     }
     var totalVel:FastVector2 = {x: 0, y: 0};
     for (target in targets) {
-      totalVel = totalVel.add(target.vel);
+      totalVel.x += target.vel.x;
+      totalVel.y += target.vel.y;
     }
     final avgVel = totalVel.div(targets.length);
     final targetVel = avgVel.normalized().mult(alignedSpeed);

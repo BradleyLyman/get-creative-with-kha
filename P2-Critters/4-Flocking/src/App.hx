@@ -23,6 +23,8 @@ class App {
   private var world:CritterWorld = new CritterWorld(
     {size: {x: 2000, y: 2000}}
   );
+  private var critterCount:Int = 1000;
+  private var needsRespawn:Bool = true;
 
   private var projection:FastMatrix3;
   private var repulser:Repulser;
@@ -36,12 +38,7 @@ class App {
     ui = new Zui({font: Assets.fonts.NotoSans_Regular, theme: theme});
 
     repulser = new Repulser();
-    respawn(1000);
-  }
-
-  private function respawn(n:Float) {
-    minDimSize = (n / maxCritters).lerp(500, 4000);
-    world.respawn(n.round());
+    minDimSize = (critterCount / maxCritters).lerp(500, 3000);
   }
 
   /** Ask the world to integrate and record the time it took. **/
@@ -58,7 +55,12 @@ class App {
   /** Render the critters and the ui **/
   public function render(framebuffers:Array<Framebuffer>):Void {
     final screen = framebuffers[0];
+
     updateProjection(screen.width, screen.height);
+    if (needsRespawn) {
+      respawn();
+    }
+
     final g2 = screen.g2;
     g2.begin();
     g2.pushTransformation(projection);
@@ -113,11 +115,18 @@ class App {
           maxCritters
         );
         if (ui.button("Respawn")) {
-          respawn(sliderValue);
+          critterCount = sliderValue.round();
+          minDimSize = (critterCount / maxCritters).lerp(500, 3000);
+          needsRespawn = true;
         }
       }
     }
     ui.end();
+  }
+
+  private function respawn() {
+    needsRespawn = false;
+    world.respawn(critterCount);
   }
 
   private function avgFrameTime():Float {

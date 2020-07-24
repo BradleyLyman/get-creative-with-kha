@@ -92,10 +92,13 @@ class CritterWorld {
 
       // kinematic integration (euler's method)
       critter.acc.limit(settings.maxAccel);
-      critter.vel = critter.vel.add(critter.acc.mult(dt));
+      critter.vel.x += critter.acc.x * dt;
+      critter.vel.y += critter.acc.y * dt;
       critter.vel.limit(settings.maxVel);
-      critter.pos = critter.pos.add(critter.vel.mult(dt));
-      critter.acc = critter.acc.mult(0.0);
+      critter.pos.x += critter.vel.x * dt;
+      critter.pos.y += critter.vel.y * dt;
+      critter.acc.x = 0;
+      critter.acc.y = 0;
     }
   }
 

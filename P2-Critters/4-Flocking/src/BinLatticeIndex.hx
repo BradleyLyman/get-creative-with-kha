@@ -63,8 +63,11 @@ class BinLatticeIndex implements CritterWorld.Index {
     distance:Float,
     out:Critters
   ):Void {
-    function isNearby(critter:Critter):Bool {
-      return critter.pos.sub(point).length <= distance;
+    final sqdistance = distance * distance;
+    inline function isNearby(critter:Critter):Bool {
+      final dx = critter.pos.x - point.x;
+      final dy = critter.pos.y - point.y;
+      return (dx * dx + dy * dy) <= sqdistance;
     }
     final transformed = point.add(size.div(2));
     final sX = (transformed.x / resolution).round();

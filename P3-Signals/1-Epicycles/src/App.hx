@@ -1,5 +1,6 @@
 package;
 
+import support.ds.CircleBuffer;
 import kha.Framebuffer;
 
 using Epicycle;
@@ -8,16 +9,43 @@ using support.FloatOps;
 class App {
   var t:Float = 0.0;
   var cycles:Array<Epicycle> = [];
+  var heights:CircleBuffer<Float>;
 
   public function new() {
-    for (i in 1...5) {
+    final x:Array<Float> = [];
+    for (i in 0...200) {
+      x.push(i);
+    }
+    heights = new CircleBuffer<Float>(400, x.length);
+
+    final X = dft(x);
+    final N = X.length;
+    for (k in 0...N) {
       cycles.push({
-        phase: (i / 5).lerp(0, Math.PI * 2),
-        offset: Math.random() * i,
-        amplitude: i * 10
+        phase: (k / N) * Math.PI * 2,
+        offset: Math.atan2(X[k].im, X[k].re) + Math.PI / 2,
+        amplitude: 1 / N * Math.sqrt(X[k].re * X[k].re + X[k].im * X[k].im)
       });
     }
     cycles.sort((a, b) -> Math.round(b.amplitude - a.amplitude));
+  }
+
+  function dft(signal:Array<Float>):Array<{re:Float, im:Float}> {
+    final N = signal.length;
+    final res:Array<{re:Float, im:Float}> = [];
+    final TWOPIN = Math.PI * 2 / N;
+
+    for (k in 0...signal.length) {
+      var r:Float = 0;
+      var i:Float = 0;
+      for (n in 0...signal.length) {
+        final x = signal[n];
+        r += x * Math.cos(TWOPIN * k * n);
+        i += x * Math.sin(TWOPIN * k * n);
+      }
+      res.push({re: r, im: i});
+    }
+    return res;
   }
 
   /**
@@ -39,7 +67,7 @@ class App {
     g2.begin();
 
     // propagate centers at time t
-    cycles.propagateCenters({x: screen.width / 2, y: screen.height / 2}, t);
+    cycles.propagateCenters({x: screen.width / 8, y: screen.height / 2}, t);
 
     // draw lines
     for (i in 1...cycles.length) {
@@ -55,6 +83,25 @@ class App {
       cycle.draw(g2, 64);
     }
 
+    g2.drawLine(now.x, now.y, screen.width / 2, now.y);
+
+    var start = screen.width / 2;
+    var step = (screen.width / 2) / cycles.length;
+    var count = 1;
+    var last = now.y;
+    for (height in heights) {
+      g2.drawLine(
+        start + step * (count - 1),
+        last,
+        start + step * count,
+        height
+      );
+      last = height;
+      count++;
+    }
+
     g2.end();
+
+    heights.push(now.y);
   }
 }

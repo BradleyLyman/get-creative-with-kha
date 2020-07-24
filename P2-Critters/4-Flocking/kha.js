@@ -11,6 +11,8 @@ function $extend(from, fields) {
 }
 var App = function() {
 	this.frameTimes = new support_ds_CircleBuffer(0,30);
+	this.needsRespawn = true;
+	this.critterCount = 1000;
 	this.world = new CritterWorld(new Settings(new kha_math_FastVector2(2000,2000),null,null,null));
 	this.maxCritters = 7000;
 	this.minDimSize = 2000;
@@ -18,7 +20,8 @@ var App = function() {
 	theme.FONT_SIZE = 24;
 	this.ui = new zui_Zui({ font : kha_Assets.fonts.NotoSans_Regular, theme : theme});
 	this.repulser = new Repulser();
-	this.respawn(1000);
+	var t = this.critterCount / this.maxCritters;
+	this.minDimSize = (1.0 - t) * 500 + t * 3000;
 };
 $hxClasses["App"] = App;
 App.__name__ = true;
@@ -26,15 +29,12 @@ App.prototype = {
 	minDimSize: null
 	,maxCritters: null
 	,world: null
+	,critterCount: null
+	,needsRespawn: null
 	,projection: null
 	,repulser: null
 	,ui: null
 	,frameTimes: null
-	,respawn: function(n) {
-		var t = n / this.maxCritters;
-		this.minDimSize = (1.0 - t) * 500 + t * 4000;
-		this.world.respawn(Math.round(n));
-	}
 	,update: function() {
 		var start = kha_Scheduler.realTime();
 		if(this.repulser.active) {
@@ -47,6 +47,9 @@ App.prototype = {
 	,render: function(framebuffers) {
 		var screen = framebuffers[0];
 		this.updateProjection(screen.get_width(),screen.get_height());
+		if(this.needsRespawn) {
+			this.respawn();
+		}
 		var g2 = screen.get_g2();
 		g2.begin();
 		var trans = this.projection;
@@ -120,11 +123,18 @@ App.prototype = {
 			if(this.ui.panel(zui_Handle.global.nest(1,null),"critters")) {
 				var sliderValue = this.ui.slider(zui_Handle.global.nest(2,{ value : this.world.critters.length}),"critter",50,this.maxCritters);
 				if(this.ui.button("Respawn")) {
-					this.respawn(sliderValue);
+					this.critterCount = Math.round(sliderValue);
+					var t1 = this.critterCount / this.maxCritters;
+					this.minDimSize = (1.0 - t1) * 500 + t1 * 3000;
+					this.needsRespawn = true;
 				}
 			}
 		}
 		this.ui.end();
+	}
+	,respawn: function() {
+		this.needsRespawn = false;
+		this.world.respawn(this.critterCount);
 	}
 	,avgFrameTime: function() {
 		var sum = 0;
@@ -166,42 +176,29 @@ BinLatticeIndex.prototype = {
 		this.resetCritters(critters);
 	}
 	,nearby: function(point,distance,out) {
-		var isNearby = function(critter) {
-			var _this = critter.pos;
-			var x = _this.x - point.x;
-			var y = _this.y - point.y;
-			if(y == null) {
-				y = 0;
-			}
-			if(x == null) {
-				x = 0;
-			}
-			var _this_x = x;
-			var _this_y = y;
-			return Math.sqrt(_this_x * _this_x + _this_y * _this_y) <= distance;
-		};
-		var _this1 = this.size;
+		var sqdistance = distance * distance;
+		var _this = this.size;
 		var value = 0.5;
-		var x1 = _this1.x * value;
-		var y1 = _this1.y * value;
+		var x = _this.x * value;
+		var y = _this.y * value;
+		if(y == null) {
+			y = 0;
+		}
+		if(x == null) {
+			x = 0;
+		}
+		var vec_x = x;
+		var vec_y = y;
+		var x1 = point.x + vec_x;
+		var y1 = point.y + vec_y;
 		if(y1 == null) {
 			y1 = 0;
 		}
 		if(x1 == null) {
 			x1 = 0;
 		}
-		var vec_x = x1;
-		var vec_y = y1;
-		var x2 = point.x + vec_x;
-		var y2 = point.y + vec_y;
-		if(y2 == null) {
-			y2 = 0;
-		}
-		if(x2 == null) {
-			x2 = 0;
-		}
-		var transformed_x = x2;
-		var transformed_y = y2;
+		var transformed_x = x1;
+		var transformed_y = y1;
 		var sX = Math.round(transformed_x / this.resolution);
 		var sY = Math.round(transformed_y / this.resolution);
 		var searchRadius = Math.ceil(distance / this.resolution);
@@ -219,10 +216,12 @@ BinLatticeIndex.prototype = {
 				var _g3 = 0;
 				var _g12 = this.bins[col + row * this.cols];
 				while(_g3 < _g12.length) {
-					var critter1 = _g12[_g3];
+					var critter = _g12[_g3];
 					++_g3;
-					if(isNearby(critter1)) {
-						out.push(critter1);
+					var dx = critter.pos.x - point.x;
+					var dy = critter.pos.y - point.y;
+					if(dx * dx + dy * dy <= sqdistance) {
+						out.push(critter);
 					}
 				}
 			}
@@ -305,101 +304,22 @@ Critter.prototype = {
 		if(size == null) {
 			size = 10;
 		}
-		var up = new kha_math_FastVector2(0,1);
-		var look;
+		var lookX = 0;
+		var lookY = 1;
 		var vec = this.vel;
 		if(vec.x * vec.x + vec.y * vec.y != 0) {
 			var _this = this.vel;
-			var v = new kha_math_FastVector2(_this.x,_this.y);
-			var currentLength = Math.sqrt(v.x * v.x + v.y * v.y);
-			if(currentLength != 0) {
-				var mul = 1 / currentLength;
-				v.x *= mul;
-				v.y *= mul;
-			}
-			look = v;
-		} else {
-			look = up;
+			var len = Math.sqrt(_this.x * _this.x + _this.y * _this.y);
+			lookX = this.vel.x / len;
+			lookY = this.vel.y / len;
 		}
-		var x = -look.y;
-		var y = look.x;
-		if(y == null) {
-			y = 0;
-		}
-		if(x == null) {
-			x = 0;
-		}
-		var look90_x = x;
-		var look90_y = y;
-		var _this1 = this.pos;
-		var value = size * 0.25;
-		var x1 = look90_x * value;
-		var y1 = look90_y * value;
-		if(y1 == null) {
-			y1 = 0;
-		}
-		if(x1 == null) {
-			x1 = 0;
-		}
-		var vec_x = x1;
-		var vec_y = y1;
-		var x2 = _this1.x + vec_x;
-		var y2 = _this1.y + vec_y;
-		if(y2 == null) {
-			y2 = 0;
-		}
-		if(x2 == null) {
-			x2 = 0;
-		}
-		var left_x = x2;
-		var left_y = y2;
-		var _this2 = this.pos;
-		var value1 = size * 0.25;
-		var x3 = look90_x * value1;
-		var y3 = look90_y * value1;
-		if(y3 == null) {
-			y3 = 0;
-		}
-		if(x3 == null) {
-			x3 = 0;
-		}
-		var vec_x1 = x3;
-		var vec_y1 = y3;
-		var x4 = _this2.x - vec_x1;
-		var y4 = _this2.y - vec_y1;
-		if(y4 == null) {
-			y4 = 0;
-		}
-		if(x4 == null) {
-			x4 = 0;
-		}
-		var right_x = x4;
-		var right_y = y4;
-		var _this3 = this.pos;
-		var x5 = look.x * size;
-		var y5 = look.y * size;
-		if(y5 == null) {
-			y5 = 0;
-		}
-		if(x5 == null) {
-			x5 = 0;
-		}
-		var vec_x2 = x5;
-		var vec_y2 = y5;
-		var x6 = _this3.x + vec_x2;
-		var y6 = _this3.y + vec_y2;
-		if(y6 == null) {
-			y6 = 0;
-		}
-		if(x6 == null) {
-			x6 = 0;
-		}
-		var front_x = x6;
-		var front_y = y6;
-		var strength = 3;
-		g2.drawLine(left_x,left_y,right_x,right_y,strength);
-		g2.drawLine(right_x,right_y,front_x,front_y,strength);
-		g2.drawLine(front_x,front_y,left_x,left_y,strength);
+		var leftX = this.pos.x - lookY * size * 0.25;
+		var leftY = this.pos.y + lookX * size * 0.25;
+		var rightX = this.pos.x + lookY * size * 0.25;
+		var rightY = this.pos.y - lookX * size * 0.25;
+		var frontX = this.pos.x + lookX * size;
+		var frontY = this.pos.y + lookY * size;
+		g2.fillTriangle(leftX,leftY,rightX,rightY,frontX,frontY);
 	}
 	,steer: function(desiredVel,force) {
 		var vec = this.vel;
@@ -439,8 +359,8 @@ Critter.prototype = {
 		}
 		var adjusted_x = x2;
 		var adjusted_y = y2;
-		var _this = this.acc;
-		this.acc = new kha_math_FastVector2(_this.x + adjusted_x,_this.y + adjusted_y);
+		this.acc.x += adjusted_x;
+		this.acc.y += adjusted_y;
 	}
 	,seek: function(target,approachThreshold,approachSpeed,force) {
 		var vec = this.pos;
@@ -454,7 +374,11 @@ Critter.prototype = {
 		}
 		var direction_x = x;
 		var direction_y = y;
-		var normDist = Math.sqrt(direction_x * direction_x + direction_y * direction_y) / approachThreshold;
+		var length = Math.sqrt(direction_x * direction_x + direction_y * direction_y);
+		if(length == 0) {
+			return;
+		}
+		var normDist = length / approachThreshold;
 		var min = 0;
 		var max = 1;
 		if(max == null) {
@@ -465,24 +389,56 @@ Critter.prototype = {
 		}
 		var clampedDist = normDist < min ? min : normDist > max ? max : normDist;
 		var seekSpeed = (1.0 - clampedDist) * 0 + clampedDist * approachSpeed;
-		var x1 = direction_x;
-		var y1 = direction_y;
+		var value = seekSpeed / length;
+		var x1 = direction_x * value;
+		var y1 = direction_y * value;
 		if(y1 == null) {
 			y1 = 0;
 		}
 		if(x1 == null) {
 			x1 = 0;
 		}
-		var _this_x = x1;
-		var _this_y = y1;
+		var seekVelocity_x = x1;
+		var seekVelocity_y = y1;
+		var vec1 = this.vel;
+		var x2 = seekVelocity_x - vec1.x;
+		var y2 = seekVelocity_y - vec1.y;
+		if(y2 == null) {
+			y2 = 0;
+		}
+		if(x2 == null) {
+			x2 = 0;
+		}
+		var delta_x = x2;
+		var delta_y = y2;
+		var x3 = delta_x;
+		var y3 = delta_y;
+		if(y3 == null) {
+			y3 = 0;
+		}
+		if(x3 == null) {
+			x3 = 0;
+		}
+		var _this_x = x3;
+		var _this_y = y3;
 		var currentLength = Math.sqrt(_this_x * _this_x + _this_y * _this_y);
 		if(currentLength != 0) {
 			var mul = 1 / currentLength;
 			_this_x *= mul;
 			_this_y *= mul;
 		}
-		var seekVelocity = new kha_math_FastVector2(_this_x * seekSpeed,_this_y * seekSpeed);
-		this.steer(seekVelocity,force);
+		var x4 = _this_x * force;
+		var y4 = _this_y * force;
+		if(y4 == null) {
+			y4 = 0;
+		}
+		if(x4 == null) {
+			x4 = 0;
+		}
+		var adjusted_x = x4;
+		var adjusted_y = y4;
+		this.acc.x += adjusted_x;
+		this.acc.y += adjusted_y;
 	}
 	,avoid: function(target,repulseThreshold,repulseSpeed,force) {
 		var _this = this.pos;
@@ -501,50 +457,96 @@ Critter.prototype = {
 			return;
 		}
 		var value = repulseSpeed / length;
-		var seekVelocity = new kha_math_FastVector2(direction_x * value,direction_y * value);
-		this.steer(seekVelocity,force);
+		var x1 = direction_x * value;
+		var y1 = direction_y * value;
+		if(y1 == null) {
+			y1 = 0;
+		}
+		if(x1 == null) {
+			x1 = 0;
+		}
+		var seekVelocity_x = x1;
+		var seekVelocity_y = y1;
+		var vec = this.vel;
+		var x2 = seekVelocity_x - vec.x;
+		var y2 = seekVelocity_y - vec.y;
+		if(y2 == null) {
+			y2 = 0;
+		}
+		if(x2 == null) {
+			x2 = 0;
+		}
+		var delta_x = x2;
+		var delta_y = y2;
+		var x3 = delta_x;
+		var y3 = delta_y;
+		if(y3 == null) {
+			y3 = 0;
+		}
+		if(x3 == null) {
+			x3 = 0;
+		}
+		var _this_x = x3;
+		var _this_y = y3;
+		var currentLength = Math.sqrt(_this_x * _this_x + _this_y * _this_y);
+		if(currentLength != 0) {
+			var mul = 1 / currentLength;
+			_this_x *= mul;
+			_this_y *= mul;
+		}
+		var x4 = _this_x * force;
+		var y4 = _this_y * force;
+		if(y4 == null) {
+			y4 = 0;
+		}
+		if(x4 == null) {
+			x4 = 0;
+		}
+		var adjusted_x = x4;
+		var adjusted_y = y4;
+		this.acc.x += adjusted_x;
+		this.acc.y += adjusted_y;
 	}
 	,avoidAll: function(targets,repulseThreshold,repulseSpeed,force) {
 		var targetsAvoided = 0;
-		var runDirection = new kha_math_FastVector2(0,0);
+		var x = 0;
+		var y = 0;
+		if(y == null) {
+			y = 0;
+		}
+		if(x == null) {
+			x = 0;
+		}
+		var runDirection_x = x;
+		var runDirection_y = y;
 		var _g = 0;
 		while(_g < targets.length) {
 			var target = targets[_g];
 			++_g;
 			var _this = this.pos;
 			var vec = target.pos;
-			var x = _this.x - vec.x;
-			var y = _this.y - vec.y;
-			if(y == null) {
-				y = 0;
-			}
-			if(x == null) {
-				x = 0;
-			}
-			var diff_x = x;
-			var diff_y = y;
-			var dist = Math.sqrt(diff_x * diff_x + diff_y * diff_y);
-			if(dist > repulseThreshold || dist == 0) {
-				continue;
-			}
-			var value = 1 / dist;
-			var x1 = diff_x * value;
-			var y1 = diff_y * value;
+			var x1 = _this.x - vec.x;
+			var y1 = _this.y - vec.y;
 			if(y1 == null) {
 				y1 = 0;
 			}
 			if(x1 == null) {
 				x1 = 0;
 			}
-			var vec_x = x1;
-			var vec_y = y1;
-			runDirection = new kha_math_FastVector2(runDirection.x + vec_x,runDirection.y + vec_y);
+			var diff_x = x1;
+			var diff_y = y1;
+			var dist = Math.sqrt(diff_x * diff_x + diff_y * diff_y);
+			if(dist > repulseThreshold || dist == 0) {
+				continue;
+			}
+			runDirection_x += diff_x / dist;
+			runDirection_y += diff_y / dist;
 			++targetsAvoided;
 		}
 		if(targetsAvoided > 0) {
-			var value1 = 1 / targetsAvoided;
-			var x2 = runDirection.x * value1;
-			var y2 = runDirection.y * value1;
+			var value = 1 / targetsAvoided;
+			var x2 = runDirection_x * value;
+			var y2 = runDirection_y * value;
 			if(y2 == null) {
 				y2 = 0;
 			}
@@ -569,13 +571,69 @@ Critter.prototype = {
 				_this_x *= mul;
 				_this_y *= mul;
 			}
-			var targetVelocity = new kha_math_FastVector2(_this_x * repulseSpeed,_this_y * repulseSpeed);
-			this.steer(targetVelocity,force);
+			var x4 = _this_x * repulseSpeed;
+			var y4 = _this_y * repulseSpeed;
+			if(y4 == null) {
+				y4 = 0;
+			}
+			if(x4 == null) {
+				x4 = 0;
+			}
+			var targetVelocity_x = x4;
+			var targetVelocity_y = y4;
+			var vec1 = this.vel;
+			var x5 = targetVelocity_x - vec1.x;
+			var y5 = targetVelocity_y - vec1.y;
+			if(y5 == null) {
+				y5 = 0;
+			}
+			if(x5 == null) {
+				x5 = 0;
+			}
+			var delta_x = x5;
+			var delta_y = y5;
+			var x6 = delta_x;
+			var y6 = delta_y;
+			if(y6 == null) {
+				y6 = 0;
+			}
+			if(x6 == null) {
+				x6 = 0;
+			}
+			var _this_x1 = x6;
+			var _this_y1 = y6;
+			var currentLength1 = Math.sqrt(_this_x1 * _this_x1 + _this_y1 * _this_y1);
+			if(currentLength1 != 0) {
+				var mul1 = 1 / currentLength1;
+				_this_x1 *= mul1;
+				_this_y1 *= mul1;
+			}
+			var x7 = _this_x1 * force;
+			var y7 = _this_y1 * force;
+			if(y7 == null) {
+				y7 = 0;
+			}
+			if(x7 == null) {
+				x7 = 0;
+			}
+			var adjusted_x = x7;
+			var adjusted_y = y7;
+			this.acc.x += adjusted_x;
+			this.acc.y += adjusted_y;
 		}
 	}
 	,seekCenter: function(targets,approachThreshold,approachSpeed,force) {
 		var targetsSought = 0;
-		var sum = new kha_math_FastVector2(0,0);
+		var x = 0;
+		var y = 0;
+		if(y == null) {
+			y = 0;
+		}
+		if(x == null) {
+			x = 0;
+		}
+		var sum_x = x;
+		var sum_y = y;
 		var _g = 0;
 		while(_g < targets.length) {
 			var target = targets[_g];
@@ -584,56 +642,195 @@ Critter.prototype = {
 				continue;
 			}
 			++targetsSought;
-			var vec = target.pos;
-			sum = new kha_math_FastVector2(sum.x + vec.x,sum.y + vec.y);
+			sum_x += target.pos.x;
+			sum_y += target.pos.y;
 		}
 		if(targetsSought > 0) {
 			var value = 1 / targetsSought;
-			var center = new kha_math_FastVector2(sum.x * value,sum.y * value);
-			this.seek(center,approachThreshold,approachSpeed,force);
+			var x1 = sum_x * value;
+			var y1 = sum_y * value;
+			if(y1 == null) {
+				y1 = 0;
+			}
+			if(x1 == null) {
+				x1 = 0;
+			}
+			var center_x = x1;
+			var center_y = y1;
+			var vec = this.pos;
+			var x2 = center_x - vec.x;
+			var y2 = center_y - vec.y;
+			if(y2 == null) {
+				y2 = 0;
+			}
+			if(x2 == null) {
+				x2 = 0;
+			}
+			var direction_x = x2;
+			var direction_y = y2;
+			var length = Math.sqrt(direction_x * direction_x + direction_y * direction_y);
+			if(length != 0) {
+				var normDist = length / approachThreshold;
+				var min = 0;
+				var max = 1;
+				if(max == null) {
+					max = 1;
+				}
+				if(min == null) {
+					min = 0;
+				}
+				var clampedDist = normDist < min ? min : normDist > max ? max : normDist;
+				var seekSpeed = (1.0 - clampedDist) * 0 + clampedDist * approachSpeed;
+				var value1 = seekSpeed / length;
+				var x3 = direction_x * value1;
+				var y3 = direction_y * value1;
+				if(y3 == null) {
+					y3 = 0;
+				}
+				if(x3 == null) {
+					x3 = 0;
+				}
+				var seekVelocity_x = x3;
+				var seekVelocity_y = y3;
+				var vec1 = this.vel;
+				var x4 = seekVelocity_x - vec1.x;
+				var y4 = seekVelocity_y - vec1.y;
+				if(y4 == null) {
+					y4 = 0;
+				}
+				if(x4 == null) {
+					x4 = 0;
+				}
+				var delta_x = x4;
+				var delta_y = y4;
+				var x5 = delta_x;
+				var y5 = delta_y;
+				if(y5 == null) {
+					y5 = 0;
+				}
+				if(x5 == null) {
+					x5 = 0;
+				}
+				var _this_x = x5;
+				var _this_y = y5;
+				var currentLength = Math.sqrt(_this_x * _this_x + _this_y * _this_y);
+				if(currentLength != 0) {
+					var mul = 1 / currentLength;
+					_this_x *= mul;
+					_this_y *= mul;
+				}
+				var x6 = _this_x * force;
+				var y6 = _this_y * force;
+				if(y6 == null) {
+					y6 = 0;
+				}
+				if(x6 == null) {
+					x6 = 0;
+				}
+				var adjusted_x = x6;
+				var adjusted_y = y6;
+				this.acc.x += adjusted_x;
+				this.acc.y += adjusted_y;
+			}
 		}
 	}
 	,align: function(targets,alignedSpeed,force) {
 		if(targets.length == 0) {
 			return;
 		}
-		var totalVel = new kha_math_FastVector2(0,0);
-		var _g = 0;
-		while(_g < targets.length) {
-			var target = targets[_g];
-			++_g;
-			var vec = target.vel;
-			totalVel = new kha_math_FastVector2(totalVel.x + vec.x,totalVel.y + vec.y);
-		}
-		var value = 1 / targets.length;
-		var x = totalVel.x * value;
-		var y = totalVel.y * value;
+		var x = 0;
+		var y = 0;
 		if(y == null) {
 			y = 0;
 		}
 		if(x == null) {
 			x = 0;
 		}
-		var avgVel_x = x;
-		var avgVel_y = y;
-		var x1 = avgVel_x;
-		var y1 = avgVel_y;
+		var totalVel_x = x;
+		var totalVel_y = y;
+		var _g = 0;
+		while(_g < targets.length) {
+			var target = targets[_g];
+			++_g;
+			totalVel_x += target.vel.x;
+			totalVel_y += target.vel.y;
+		}
+		var value = 1 / targets.length;
+		var x1 = totalVel_x * value;
+		var y1 = totalVel_y * value;
 		if(y1 == null) {
 			y1 = 0;
 		}
 		if(x1 == null) {
 			x1 = 0;
 		}
-		var _this_x = x1;
-		var _this_y = y1;
+		var avgVel_x = x1;
+		var avgVel_y = y1;
+		var x2 = avgVel_x;
+		var y2 = avgVel_y;
+		if(y2 == null) {
+			y2 = 0;
+		}
+		if(x2 == null) {
+			x2 = 0;
+		}
+		var _this_x = x2;
+		var _this_y = y2;
 		var currentLength = Math.sqrt(_this_x * _this_x + _this_y * _this_y);
 		if(currentLength != 0) {
 			var mul = 1 / currentLength;
 			_this_x *= mul;
 			_this_y *= mul;
 		}
-		var targetVel = new kha_math_FastVector2(_this_x * alignedSpeed,_this_y * alignedSpeed);
-		this.steer(targetVel,force);
+		var x3 = _this_x * alignedSpeed;
+		var y3 = _this_y * alignedSpeed;
+		if(y3 == null) {
+			y3 = 0;
+		}
+		if(x3 == null) {
+			x3 = 0;
+		}
+		var targetVel_x = x3;
+		var targetVel_y = y3;
+		var vec = this.vel;
+		var x4 = targetVel_x - vec.x;
+		var y4 = targetVel_y - vec.y;
+		if(y4 == null) {
+			y4 = 0;
+		}
+		if(x4 == null) {
+			x4 = 0;
+		}
+		var delta_x = x4;
+		var delta_y = y4;
+		var x5 = delta_x;
+		var y5 = delta_y;
+		if(y5 == null) {
+			y5 = 0;
+		}
+		if(x5 == null) {
+			x5 = 0;
+		}
+		var _this_x1 = x5;
+		var _this_y1 = y5;
+		var currentLength1 = Math.sqrt(_this_x1 * _this_x1 + _this_y1 * _this_y1);
+		if(currentLength1 != 0) {
+			var mul1 = 1 / currentLength1;
+			_this_x1 *= mul1;
+			_this_y1 *= mul1;
+		}
+		var x6 = _this_x1 * force;
+		var y6 = _this_y1 * force;
+		if(y6 == null) {
+			y6 = 0;
+		}
+		if(x6 == null) {
+			x6 = 0;
+		}
+		var adjusted_x = x6;
+		var adjusted_y = y6;
+		this.acc.x += adjusted_x;
+		this.acc.y += adjusted_y;
 	}
 	,__class__: Critter
 };
@@ -707,19 +904,8 @@ CritterWorld.prototype = {
 					vec.y *= mul;
 				}
 			}
-			var _this = critter1.vel;
-			var _this1 = critter1.acc;
-			var x = _this1.x * dt;
-			var y = _this1.y * dt;
-			if(y == null) {
-				y = 0;
-			}
-			if(x == null) {
-				x = 0;
-			}
-			var vec_x = x;
-			var vec_y = y;
-			critter1.vel = new kha_math_FastVector2(_this.x + vec_x,_this.y + vec_y);
+			critter1.vel.x += critter1.acc.x * dt;
+			critter1.vel.y += critter1.acc.y * dt;
 			var vec1 = critter1.vel;
 			var length1 = this.settings.maxVel;
 			if(vec1.x * vec1.x + vec1.y * vec1.y > length1 * length1) {
@@ -730,21 +916,10 @@ CritterWorld.prototype = {
 					vec1.y *= mul1;
 				}
 			}
-			var _this2 = critter1.pos;
-			var _this3 = critter1.vel;
-			var x1 = _this3.x * dt;
-			var y1 = _this3.y * dt;
-			if(y1 == null) {
-				y1 = 0;
-			}
-			if(x1 == null) {
-				x1 = 0;
-			}
-			var vec_x1 = x1;
-			var vec_y1 = y1;
-			critter1.pos = new kha_math_FastVector2(_this2.x + vec_x1,_this2.y + vec_y1);
-			var _this4 = critter1.acc;
-			critter1.acc = new kha_math_FastVector2(_this4.x * 0.0,_this4.y * 0.0);
+			critter1.pos.x += critter1.vel.x * dt;
+			critter1.pos.y += critter1.vel.y * dt;
+			critter1.acc.x = 0;
+			critter1.acc.y = 0;
 		}
 	}
 	,buildIndex: function() {
@@ -795,14 +970,206 @@ CritterWorld.prototype = {
 		critter.pos.y = t1 < min1 ? min1 : t1 > max1 ? max1 : t1;
 		var force = this.settings.maxAccel;
 		if(critter.pos.x < -softLimit_x) {
-			critter.steer(new kha_math_FastVector2(this.settings.maxVel,critter.vel.y),force);
+			var x2 = this.settings.maxVel;
+			var y2 = critter.vel.y;
+			if(y2 == null) {
+				y2 = 0;
+			}
+			if(x2 == null) {
+				x2 = 0;
+			}
+			var desiredVel_x = x2;
+			var desiredVel_y = y2;
+			var vec = critter.vel;
+			var x3 = desiredVel_x - vec.x;
+			var y3 = desiredVel_y - vec.y;
+			if(y3 == null) {
+				y3 = 0;
+			}
+			if(x3 == null) {
+				x3 = 0;
+			}
+			var delta_x = x3;
+			var delta_y = y3;
+			var x4 = delta_x;
+			var y4 = delta_y;
+			if(y4 == null) {
+				y4 = 0;
+			}
+			if(x4 == null) {
+				x4 = 0;
+			}
+			var _this_x = x4;
+			var _this_y = y4;
+			var currentLength = Math.sqrt(_this_x * _this_x + _this_y * _this_y);
+			if(currentLength != 0) {
+				var mul = 1 / currentLength;
+				_this_x *= mul;
+				_this_y *= mul;
+			}
+			var x5 = _this_x * force;
+			var y5 = _this_y * force;
+			if(y5 == null) {
+				y5 = 0;
+			}
+			if(x5 == null) {
+				x5 = 0;
+			}
+			var adjusted_x = x5;
+			var adjusted_y = y5;
+			critter.acc.x += adjusted_x;
+			critter.acc.y += adjusted_y;
 		} else if(critter.pos.x > softLimit_x) {
-			critter.steer(new kha_math_FastVector2(-this.settings.maxVel,critter.vel.y),force);
+			var x6 = -this.settings.maxVel;
+			var y6 = critter.vel.y;
+			if(y6 == null) {
+				y6 = 0;
+			}
+			if(x6 == null) {
+				x6 = 0;
+			}
+			var desiredVel_x1 = x6;
+			var desiredVel_y1 = y6;
+			var vec1 = critter.vel;
+			var x7 = desiredVel_x1 - vec1.x;
+			var y7 = desiredVel_y1 - vec1.y;
+			if(y7 == null) {
+				y7 = 0;
+			}
+			if(x7 == null) {
+				x7 = 0;
+			}
+			var delta_x1 = x7;
+			var delta_y1 = y7;
+			var x8 = delta_x1;
+			var y8 = delta_y1;
+			if(y8 == null) {
+				y8 = 0;
+			}
+			if(x8 == null) {
+				x8 = 0;
+			}
+			var _this_x1 = x8;
+			var _this_y1 = y8;
+			var currentLength1 = Math.sqrt(_this_x1 * _this_x1 + _this_y1 * _this_y1);
+			if(currentLength1 != 0) {
+				var mul1 = 1 / currentLength1;
+				_this_x1 *= mul1;
+				_this_y1 *= mul1;
+			}
+			var x9 = _this_x1 * force;
+			var y9 = _this_y1 * force;
+			if(y9 == null) {
+				y9 = 0;
+			}
+			if(x9 == null) {
+				x9 = 0;
+			}
+			var adjusted_x1 = x9;
+			var adjusted_y1 = y9;
+			critter.acc.x += adjusted_x1;
+			critter.acc.y += adjusted_y1;
 		}
 		if(critter.pos.y < -softLimit_y) {
-			critter.steer(new kha_math_FastVector2(critter.vel.x,this.settings.maxVel),force);
+			var x10 = critter.vel.x;
+			var y10 = this.settings.maxVel;
+			if(y10 == null) {
+				y10 = 0;
+			}
+			if(x10 == null) {
+				x10 = 0;
+			}
+			var desiredVel_x2 = x10;
+			var desiredVel_y2 = y10;
+			var vec2 = critter.vel;
+			var x11 = desiredVel_x2 - vec2.x;
+			var y11 = desiredVel_y2 - vec2.y;
+			if(y11 == null) {
+				y11 = 0;
+			}
+			if(x11 == null) {
+				x11 = 0;
+			}
+			var delta_x2 = x11;
+			var delta_y2 = y11;
+			var x12 = delta_x2;
+			var y12 = delta_y2;
+			if(y12 == null) {
+				y12 = 0;
+			}
+			if(x12 == null) {
+				x12 = 0;
+			}
+			var _this_x2 = x12;
+			var _this_y2 = y12;
+			var currentLength2 = Math.sqrt(_this_x2 * _this_x2 + _this_y2 * _this_y2);
+			if(currentLength2 != 0) {
+				var mul2 = 1 / currentLength2;
+				_this_x2 *= mul2;
+				_this_y2 *= mul2;
+			}
+			var x13 = _this_x2 * force;
+			var y13 = _this_y2 * force;
+			if(y13 == null) {
+				y13 = 0;
+			}
+			if(x13 == null) {
+				x13 = 0;
+			}
+			var adjusted_x2 = x13;
+			var adjusted_y2 = y13;
+			critter.acc.x += adjusted_x2;
+			critter.acc.y += adjusted_y2;
 		} else if(critter.pos.y > softLimit_y) {
-			critter.steer(new kha_math_FastVector2(critter.vel.x,-this.settings.maxVel),force);
+			var x14 = critter.vel.x;
+			var y14 = -this.settings.maxVel;
+			if(y14 == null) {
+				y14 = 0;
+			}
+			if(x14 == null) {
+				x14 = 0;
+			}
+			var desiredVel_x3 = x14;
+			var desiredVel_y3 = y14;
+			var vec3 = critter.vel;
+			var x15 = desiredVel_x3 - vec3.x;
+			var y15 = desiredVel_y3 - vec3.y;
+			if(y15 == null) {
+				y15 = 0;
+			}
+			if(x15 == null) {
+				x15 = 0;
+			}
+			var delta_x3 = x15;
+			var delta_y3 = y15;
+			var x16 = delta_x3;
+			var y16 = delta_y3;
+			if(y16 == null) {
+				y16 = 0;
+			}
+			if(x16 == null) {
+				x16 = 0;
+			}
+			var _this_x3 = x16;
+			var _this_y3 = y16;
+			var currentLength3 = Math.sqrt(_this_x3 * _this_x3 + _this_y3 * _this_y3);
+			if(currentLength3 != 0) {
+				var mul3 = 1 / currentLength3;
+				_this_x3 *= mul3;
+				_this_y3 *= mul3;
+			}
+			var x17 = _this_x3 * force;
+			var y17 = _this_y3 * force;
+			if(y17 == null) {
+				y17 = 0;
+			}
+			if(x17 == null) {
+				x17 = 0;
+			}
+			var adjusted_x3 = x17;
+			var adjusted_y3 = y17;
+			critter.acc.x += adjusted_x3;
+			critter.acc.y += adjusted_y3;
 		}
 	}
 	,avoid: function(point,radius) {

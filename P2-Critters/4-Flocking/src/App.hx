@@ -1,13 +1,10 @@
 package;
 
-import kha.math.FastVector2;
 import haxe.Timer;
 import zui.Id;
 import kha.Assets;
 import zui.Themes;
 import kha.math.FastMatrix3;
-import kha.input.Mouse;
-import kha.System;
 import kha.Framebuffer;
 import support.ds.CircleBuffer;
 import zui.Zui;
@@ -21,12 +18,14 @@ using support.FloatOps;
   user input to interact with critters.
 **/
 class App {
+  private final maxCritters:Int = 7000;
   private var world:CritterWorld = new CritterWorld(
-    {size: {x: 1500, y: 1500}}
+    {size: {x: 2000, y: 2000}}
   );
 
-  private var pressed:Bool;
-  private var pressedAt:FastVector2;
+  private var projection:FastMatrix3;
+  private var repulser:Repulser;
+
   private var ui:Zui;
   private var frameTimes:CircleBuffer<Float> = {init: 0, maxLen: 30};
 
@@ -34,36 +33,21 @@ class App {
     final theme = Themes.dark;
     theme.FONT_SIZE = 24;
     ui = new Zui({font: Assets.fonts.NotoSans_Regular, theme: theme});
-    Mouse.get().notify(onClick, onRelease, onMove, null);
-    world.respawn(1000);
+
+    repulser = new Repulser();
+    respawn(1000);
   }
 
-  /** Critters chase the mouse when it's clicked **/
-  public function onClick(_button:Int, x:Int, y:Int) {
-    final proj = orthoProjection(System.windowWidth(), System.windowHeight());
-    pressedAt = proj.inverse().multvec({x: x, y: y});
-    pressed = true;
-  }
-
-  public function onRelease(_button:Int, x:Int, y:Int) {
-    pressed = false;
-  }
-
-  public function onMove(x:Int, y:Int, dx:Int, dy:Int) {
-    if (pressed) {
-      final proj = orthoProjection(
-        System.windowWidth(),
-        System.windowHeight()
-      );
-      pressedAt = proj.inverse().multvec({x: x, y: y});
-    }
+  private function respawn(n:Float) {
+    world.settings.size.y = (n / maxCritters).lerp(500, 4000);
+    world.respawn(n.round());
   }
 
   /** Ask the world to integrate and record the time it took. **/
   public function update() {
     final start = Timer.stamp();
-    if (pressed) {
-      world.avoid(pressedAt);
+    if (repulser.active) {
+      world.avoid(repulser.centeredAt, repulser.radius());
     }
     world.integrate();
     final end = Timer.stamp();
@@ -73,42 +57,39 @@ class App {
   /** Render the critters and the ui **/
   public function render(framebuffers:Array<Framebuffer>):Void {
     final screen = framebuffers[0];
+    updateProjection(screen.width, screen.height);
     final g2 = screen.g2;
     g2.begin();
-    g2.pushTransformation(orthoProjection(screen.width, screen.height));
+    g2.pushTransformation(projection);
     for (critter in world.critters) {
       critter.draw(g2);
     }
+    repulser.draw(g2);
     g2.popTransformation();
     g2.end();
 
     drawUi(screen);
   }
 
-  /**
-    Create a projection matrix for the current world, mapping into a space with
-    new dimensions W and H.
-  **/
-  public function orthoProjection(W:Float, H:Float):FastMatrix3 {
-    setAspect(W / H);
+  /** Set the projection from worldspace to screen space. **/
+  public function updateProjection(W:Float, H:Float):Void {
+    // reset the aspect ratio to fill the full screen
+    world.settings.size.x = (W / H) * world.settings.size.y;
+
     final bx = world.settings.size.x / 2;
     final by = world.settings.size.y / 2;
-
     // @formatter:off
-    return new FastMatrix3(
+    projection = new FastMatrix3(
       W/(2*bx), 0        , W/2,
       0       , -H/(2*by), H/2,
       0       , 0        , 1
     );
     // @formatter:on
-  }
-
-  /**
-    Reset the critter world's aspect ratio. Convenient for making the world
-    fill the entire screen without scaling artifacts.
-  **/
-  public function setAspect(widthOverHeight:Float) {
-    world.settings.size.x = widthOverHeight * world.settings.size.y;
+    repulser.invProject = projection.inverse();
+    repulser.maxRadius = Math.min(
+      world.settings.size.y,
+      world.settings.size.x
+    ) * 0.25;
   }
 
   private function drawUi(screen:Framebuffer) {
@@ -122,10 +103,10 @@ class App {
           Id.handle({value: world.critters.length}),
           "critter",
           50,
-          7000
+          maxCritters
         );
         if (ui.button("Respawn")) {
-          world.respawn(sliderValue.round());
+          respawn(sliderValue);
         }
       }
     }

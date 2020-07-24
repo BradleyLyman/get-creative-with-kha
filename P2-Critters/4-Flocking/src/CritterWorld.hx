@@ -143,9 +143,9 @@ class CritterWorld {
     Make all of the critters in the world flee from a single point in the
     world.
   **/
-  public function avoid(point:FastVector2) {
+  public function avoid(point:FastVector2, radius:Float) {
     for (critter in critters) {
-      critter.avoid(point, 200, settings.maxVel, settings.maxAccel);
+      critter.avoid(point, radius, settings.maxVel, settings.maxAccel);
     }
   }
 

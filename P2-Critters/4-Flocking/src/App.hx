@@ -18,6 +18,7 @@ using support.FloatOps;
   user input to interact with critters.
 **/
 class App {
+  private var minDimSize:Float = 2000;
   private final maxCritters:Int = 7000;
   private var world:CritterWorld = new CritterWorld(
     {size: {x: 2000, y: 2000}}
@@ -39,7 +40,7 @@ class App {
   }
 
   private function respawn(n:Float) {
-    world.settings.size.y = (n / maxCritters).lerp(500, 4000);
+    minDimSize = (n / maxCritters).lerp(500, 4000);
     world.respawn(n.round());
   }
 
@@ -73,8 +74,14 @@ class App {
 
   /** Set the projection from worldspace to screen space. **/
   public function updateProjection(W:Float, H:Float):Void {
-    // reset the aspect ratio to fill the full screen
-    world.settings.size.x = (W / H) * world.settings.size.y;
+    if (W >= H) {
+      // reset the aspect ratio to fill the full screen
+      world.settings.size.y = minDimSize;
+      world.settings.size.x = (W / H) * world.settings.size.y;
+    } else {
+      world.settings.size.x = minDimSize;
+      world.settings.size.y = (H / W) * world.settings.size.x;
+    }
 
     final bx = world.settings.size.x / 2;
     final by = world.settings.size.y / 2;

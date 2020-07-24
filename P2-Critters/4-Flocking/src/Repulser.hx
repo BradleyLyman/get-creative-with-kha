@@ -24,9 +24,9 @@ class Repulser {
     Mouse.get().notify(onClick, onRelease, onMove, null);
   }
 
-  /** The repulser's radius. Increases over 3 seconds. **/
+  /** The repulser's radius. Increases over 0.5 seconds. **/
   public function radius():Float {
-    return (activeDuration / 3).clamp().lerp(0, maxRadius);
+    return (activeDuration * 2).clamp().lerp(0, maxRadius);
   }
 
   /** Draw a circle for the repulser if it's active **/

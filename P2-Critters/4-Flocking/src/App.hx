@@ -23,7 +23,7 @@ class App {
   private var world:CritterWorld = new CritterWorld(
     {size: {x: 2000, y: 2000}}
   );
-  private var critterCount:Int = 1000;
+  private var critterCount:Int = 500;
   private var needsRespawn:Bool = true;
 
   private var projection:FastMatrix3;

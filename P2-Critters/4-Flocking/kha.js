@@ -10,119 +10,44 @@ function $extend(from, fields) {
 	return proto;
 }
 var App = function() {
-	this.world = new CritterWorld(new Settings(new kha_math_FastVector2(2000,2000),null,null,null));
 	this.frameTimes = new support_ds_CircleBuffer(0,30);
+	this.world = new CritterWorld(new Settings(new kha_math_FastVector2(2000,2000),null,null,null));
+	this.maxCritters = 7000;
 	var theme = zui_Themes.dark;
 	theme.FONT_SIZE = 24;
 	this.ui = new zui_Zui({ font : kha_Assets.fonts.NotoSans_Regular, theme : theme});
-	kha_input_Mouse.get().notify($bind(this,this.spawnCritters),null,$bind(this,this.onMove),null);
+	this.repulser = new Repulser();
+	this.respawn(1000);
 };
 $hxClasses["App"] = App;
 App.__name__ = true;
 App.prototype = {
-	ui: null
-	,frameTimes: null
+	maxCritters: null
 	,world: null
-	,onMove: function(x,y,dx,dy) {
-		var proj = this.orthoProjection(kha_System.windowWidth(),kha_System.windowHeight());
-		var c00 = proj._11 * proj._22 - proj._21 * proj._12;
-		var c01 = proj._10 * proj._22 - proj._20 * proj._12;
-		var c02 = proj._10 * proj._21 - proj._20 * proj._11;
-		var det = proj._00 * c00 - proj._01 * c01 + proj._02 * c02;
-		if(Math.abs(det) < 0.000001) {
-			throw new js__$Boot_HaxeError("determinant is too small");
-		}
-		var c10 = proj._01 * proj._22 - proj._21 * proj._02;
-		var c11 = proj._00 * proj._22 - proj._20 * proj._02;
-		var c12 = proj._00 * proj._21 - proj._20 * proj._01;
-		var c20 = proj._01 * proj._12 - proj._11 * proj._02;
-		var c21 = proj._00 * proj._12 - proj._10 * proj._02;
-		var c22 = proj._00 * proj._11 - proj._10 * proj._01;
-		var invdet = 1.0 / det;
-		var _this__00 = c00 * invdet;
-		var _this__10 = -c01 * invdet;
-		var _this__20 = c02 * invdet;
-		var _this__01 = -c10 * invdet;
-		var _this__11 = c11 * invdet;
-		var _this__21 = -c12 * invdet;
-		var _this__02 = c20 * invdet;
-		var _this__12 = -c21 * invdet;
-		var _this__22 = c22 * invdet;
-		var x1 = x;
-		var y1 = y;
-		if(y1 == null) {
-			y1 = 0;
-		}
-		if(x1 == null) {
-			x1 = 0;
-		}
-		var value_x = x1;
-		var value_y = y1;
-		var w = _this__02 * value_x + _this__12 * value_y + _this__22;
-		var x2 = (_this__00 * value_x + _this__10 * value_y + _this__20) / w;
-		var y2 = (_this__01 * value_x + _this__11 * value_y + _this__21) / w;
-		var realMouse = new kha_math_FastVector2(x2,y2);
-		this.world.seek(realMouse);
-	}
-	,spawnCritters: function(_button,x,y) {
-		if(this.world.critters.length > 2500) {
-			return;
-		}
-		var proj = this.orthoProjection(kha_System.windowWidth(),kha_System.windowHeight());
-		var c00 = proj._11 * proj._22 - proj._21 * proj._12;
-		var c01 = proj._10 * proj._22 - proj._20 * proj._12;
-		var c02 = proj._10 * proj._21 - proj._20 * proj._11;
-		var det = proj._00 * c00 - proj._01 * c01 + proj._02 * c02;
-		if(Math.abs(det) < 0.000001) {
-			throw new js__$Boot_HaxeError("determinant is too small");
-		}
-		var c10 = proj._01 * proj._22 - proj._21 * proj._02;
-		var c11 = proj._00 * proj._22 - proj._20 * proj._02;
-		var c12 = proj._00 * proj._21 - proj._20 * proj._01;
-		var c20 = proj._01 * proj._12 - proj._11 * proj._02;
-		var c21 = proj._00 * proj._12 - proj._10 * proj._02;
-		var c22 = proj._00 * proj._11 - proj._10 * proj._01;
-		var invdet = 1.0 / det;
-		var _this__00 = c00 * invdet;
-		var _this__10 = -c01 * invdet;
-		var _this__20 = c02 * invdet;
-		var _this__01 = -c10 * invdet;
-		var _this__11 = c11 * invdet;
-		var _this__21 = -c12 * invdet;
-		var _this__02 = c20 * invdet;
-		var _this__12 = -c21 * invdet;
-		var _this__22 = c22 * invdet;
-		var x1 = x;
-		var y1 = y;
-		if(y1 == null) {
-			y1 = 0;
-		}
-		if(x1 == null) {
-			x1 = 0;
-		}
-		var value_x = x1;
-		var value_y = y1;
-		var w = _this__02 * value_x + _this__12 * value_y + _this__22;
-		var x2 = (_this__00 * value_x + _this__10 * value_y + _this__20) / w;
-		var y2 = (_this__01 * value_x + _this__11 * value_y + _this__21) / w;
-		var realMouse = new kha_math_FastVector2(x2,y2);
-		var _g = 0;
-		while(_g < 100) {
-			var i = _g++;
-			this.world.spawn(realMouse);
-		}
+	,projection: null
+	,repulser: null
+	,ui: null
+	,frameTimes: null
+	,respawn: function(n) {
+		var t = n / this.maxCritters;
+		this.world.settings.size.y = (1.0 - t) * 500 + t * 4000;
+		this.world.respawn(Math.round(n));
 	}
 	,update: function() {
 		var start = kha_Scheduler.realTime();
+		if(this.repulser.active) {
+			this.world.avoid(this.repulser.centeredAt,this.repulser.radius());
+		}
 		this.world.integrate();
 		var end = kha_Scheduler.realTime();
 		this.frameTimes.push(end - start);
 	}
 	,render: function(framebuffers) {
 		var screen = framebuffers[0];
+		this.updateProjection(screen.get_width(),screen.get_height());
 		var g2 = screen.get_g2();
 		g2.begin();
-		var trans = this.orthoProjection(screen.get_width(),screen.get_height());
+		var trans = this.projection;
 		g2.transformationIndex++;
 		if(g2.transformationIndex == g2.transformations.length) {
 			g2.transformations.push(new kha_math_FastMatrix3(1,0,0,0,1,0,0,0,1));
@@ -145,30 +70,51 @@ App.prototype = {
 			++_g;
 			critter.draw(g2);
 		}
+		this.repulser.draw(g2);
 		g2.popTransformation();
 		g2.end();
 		this.drawUi(screen);
 	}
-	,orthoProjection: function(W,H) {
-		this.setAspect(W / H);
+	,updateProjection: function(W,H) {
+		this.world.settings.size.x = W / H * this.world.settings.size.y;
 		var bx = this.world.settings.size.x / 2;
 		var by = this.world.settings.size.y / 2;
-		return new kha_math_FastMatrix3(W / (2 * bx),0,W / 2,0,-H / (2 * by),H / 2,0,0,1);
-	}
-	,setAspect: function(widthOverHeight) {
-		this.world.settings.size.x = widthOverHeight * this.world.settings.size.y;
+		this.projection = new kha_math_FastMatrix3(W / (2 * bx),0,W / 2,0,-H / (2 * by),H / 2,0,0,1);
+		var _this = this.projection;
+		var c00 = _this._11 * _this._22 - _this._21 * _this._12;
+		var c01 = _this._10 * _this._22 - _this._20 * _this._12;
+		var c02 = _this._10 * _this._21 - _this._20 * _this._11;
+		var det = _this._00 * c00 - _this._01 * c01 + _this._02 * c02;
+		if(Math.abs(det) < 0.000001) {
+			throw new js__$Boot_HaxeError("determinant is too small");
+		}
+		var c10 = _this._01 * _this._22 - _this._21 * _this._02;
+		var c11 = _this._00 * _this._22 - _this._20 * _this._02;
+		var c12 = _this._00 * _this._21 - _this._20 * _this._01;
+		var c20 = _this._01 * _this._12 - _this._11 * _this._02;
+		var c21 = _this._00 * _this._12 - _this._10 * _this._02;
+		var c22 = _this._00 * _this._11 - _this._10 * _this._01;
+		var invdet = 1.0 / det;
+		var tmp = new kha_math_FastMatrix3(c00 * invdet,-c01 * invdet,c02 * invdet,-c10 * invdet,c11 * invdet,-c12 * invdet,c20 * invdet,-c21 * invdet,c22 * invdet);
+		this.repulser.invProject = tmp;
+		this.repulser.maxRadius = Math.min(this.world.settings.size.y,this.world.settings.size.x) * 0.25;
 	}
 	,drawUi: function(screen) {
 		var hwin = zui_Handle.global.nest(0,null);
 		hwin.redraws = 1;
 		this.ui.begin(screen.get_g2());
 		if(this.ui.window(hwin,screen.get_width() - 300,0,300,800,false)) {
-			this.ui.text("critters: " + this.world.critters.length);
 			var tmp = this.ui;
 			var t = this.avgFrameTime();
 			var mult = Math.round(Math.pow(10,3));
 			var snapped = Math.round(t * mult) / mult;
 			tmp.text("Avg Frame Time: " + snapped + "ms");
+			if(this.ui.panel(zui_Handle.global.nest(1,null),"critters")) {
+				var sliderValue = this.ui.slider(zui_Handle.global.nest(2,{ value : this.world.critters.length}),"critter",50,this.maxCritters);
+				if(this.ui.button("Respawn")) {
+					this.respawn(sliderValue);
+				}
+			}
 		}
 		this.ui.end();
 	}
@@ -191,12 +137,12 @@ Index.prototype = {
 	nearby: null
 	,__class__: Index
 };
-var BinLatticeIndex = function(critters,resolution,size) {
+var BinLatticeIndex = function(resolution) {
+	this.size = new kha_math_FastVector2(0,0);
+	this.cols = 0;
+	this.rows = 0;
 	this.resolution = resolution;
 	this.bins = [];
-	this.size = size;
-	this.resize(size);
-	this.resetCritters(critters);
 };
 $hxClasses["BinLatticeIndex"] = BinLatticeIndex;
 BinLatticeIndex.__name__ = true;
@@ -207,7 +153,75 @@ BinLatticeIndex.prototype = {
 	,rows: null
 	,cols: null
 	,size: null
+	,flush: function(critters,size) {
+		this.resize(size);
+		this.resetCritters(critters);
+	}
+	,nearby: function(point,distance,out) {
+		var isNearby = function(critter) {
+			var _this = critter.pos;
+			var x = _this.x - point.x;
+			var y = _this.y - point.y;
+			if(y == null) {
+				y = 0;
+			}
+			if(x == null) {
+				x = 0;
+			}
+			var _this_x = x;
+			var _this_y = y;
+			return Math.sqrt(_this_x * _this_x + _this_y * _this_y) <= distance;
+		};
+		var _this1 = this.size;
+		var value = 0.5;
+		var x1 = _this1.x * value;
+		var y1 = _this1.y * value;
+		if(y1 == null) {
+			y1 = 0;
+		}
+		if(x1 == null) {
+			x1 = 0;
+		}
+		var vec_x = x1;
+		var vec_y = y1;
+		var x2 = point.x + vec_x;
+		var y2 = point.y + vec_y;
+		if(y2 == null) {
+			y2 = 0;
+		}
+		if(x2 == null) {
+			x2 = 0;
+		}
+		var transformed_x = x2;
+		var transformed_y = y2;
+		var sX = Math.round(transformed_x / this.resolution);
+		var sY = Math.round(transformed_y / this.resolution);
+		var searchRadius = Math.ceil(distance / this.resolution);
+		var _g = sX - searchRadius;
+		var _g1 = sX + searchRadius;
+		while(_g < _g1) {
+			var col = _g++;
+			var _g2 = sY - searchRadius;
+			var _g11 = sY + searchRadius;
+			while(_g2 < _g11) {
+				var row = _g2++;
+				if(!this.inBounds(col,row)) {
+					continue;
+				}
+				var _g3 = 0;
+				var _g12 = this.bins[col + row * this.cols];
+				while(_g3 < _g12.length) {
+					var critter1 = _g12[_g3];
+					++_g3;
+					if(isNearby(critter1)) {
+						out.push(critter1);
+					}
+				}
+			}
+		}
+	}
 	,resize: function(size) {
+		this.size = size;
 		this.cols = Math.ceil(size.x / this.resolution) + 1;
 		this.rows = Math.ceil(size.y / this.resolution) + 1;
 		this.bins.length = this.cols * this.rows;
@@ -255,89 +269,15 @@ BinLatticeIndex.prototype = {
 			this.bins[snapX + snapY * this.cols].push(critter);
 		}
 	}
-	,nearby: function(point,distance) {
-		var _this = this.size;
-		var value = 0.5;
-		var x = _this.x * value;
-		var y = _this.y * value;
-		if(y == null) {
-			y = 0;
-		}
-		if(x == null) {
-			x = 0;
-		}
-		var vec_x = x;
-		var vec_y = y;
-		var x1 = point.x + vec_x;
-		var y1 = point.y + vec_y;
-		if(y1 == null) {
-			y1 = 0;
-		}
-		if(x1 == null) {
-			x1 = 0;
-		}
-		var transformed_x = x1;
-		var transformed_y = y1;
-		var sX = Math.round(transformed_x / this.resolution);
-		var sY = Math.round(transformed_y / this.resolution);
-		var isNearby = function(critter) {
-			var _this1 = critter.pos;
-			var x2 = _this1.x - point.x;
-			var y2 = _this1.y - point.y;
-			if(y2 == null) {
-				y2 = 0;
+	,inBounds: function(col,row) {
+		if(row >= 0 && col >= 0) {
+			if(col < this.cols) {
+				return row < this.rows;
+			} else {
+				return false;
 			}
-			if(x2 == null) {
-				x2 = 0;
-			}
-			var _this_x = x2;
-			var _this_y = y2;
-			return Math.sqrt(_this_x * _this_x + _this_y * _this_y) <= distance;
-		};
-		var candidates = this.gatherAround(sX,sY);
-		var _g = [];
-		var _g1 = 0;
-		var _g2 = candidates;
-		while(_g1 < _g2.length) {
-			var v = _g2[_g1];
-			++_g1;
-			if(isNearby(v)) {
-				_g.push(v);
-			}
-		}
-		return _g;
-	}
-	,gatherAround: function(col,row) {
-		var _gthis = this;
-		var coords = [[col,row],[col,row - 1],[col,row + 1],[col - 1,row],[col - 1,row - 1],[col - 1,row + 1],[col + 1,row],[col + 1,row - 1],[col + 1,row + 1]];
-		var _g = [];
-		var _g1 = 0;
-		var _g2 = coords;
-		while(_g1 < _g2.length) {
-			var v = _g2[_g1];
-			++_g1;
-			if(v[0] >= 0 && v[1] >= 0 && (v[0] < _gthis.cols && v[1] < _gthis.rows)) {
-				_g.push(v);
-			}
-		}
-		var reduced = _g;
-		var critters = [];
-		var _g3 = 0;
-		while(_g3 < reduced.length) {
-			var section = reduced[_g3];
-			++_g3;
-			var col1 = section[0];
-			var row1 = section[1];
-			this.addAll(critters,this.bins[col1 + row1 * this.cols]);
-		}
-		return critters;
-	}
-	,addAll: function(critters,others) {
-		var _g = 0;
-		while(_g < others.length) {
-			var other = others[_g];
-			++_g;
-			critters.push(other);
+		} else {
+			return false;
 		}
 	}
 	,__class__: BinLatticeIndex
@@ -720,14 +660,14 @@ Settings.prototype = {
 var CritterWorld = function(settings) {
 	this.settings = settings;
 	this.critters = [];
-	this.blIndex = new BinLatticeIndex([],50,settings.size);
+	this.binLatticeIndex = new BinLatticeIndex(50);
 };
 $hxClasses["CritterWorld"] = CritterWorld;
 CritterWorld.__name__ = true;
 CritterWorld.prototype = {
 	settings: null
 	,critters: null
-	,blIndex: null
+	,binLatticeIndex: null
 	,integrate: function() {
 		var _g = 0;
 		var _g1 = this.critters;
@@ -738,12 +678,14 @@ CritterWorld.prototype = {
 		}
 		var index = this.buildIndex();
 		var dt = this.settings.integrationSeconds;
+		var nearby = [];
 		var _g2 = 0;
 		var _g3 = this.critters;
 		while(_g2 < _g3.length) {
 			var critter1 = _g3[_g2];
 			++_g2;
-			var nearby = index.nearby(critter1.pos,50);
+			nearby.length = 0;
+			index.nearby(critter1.pos,50,nearby);
 			critter1.align(nearby,this.settings.maxVel,this.settings.maxAccel * 0.75);
 			critter1.seekCenter(nearby,50,this.settings.maxVel,this.settings.maxAccel * 0.5);
 			critter1.avoidAll(nearby,35,this.settings.maxVel,this.settings.maxAccel);
@@ -798,18 +740,8 @@ CritterWorld.prototype = {
 		}
 	}
 	,buildIndex: function() {
-		this.blIndex.resize(this.settings.size);
-		this.blIndex.resetCritters(this.critters);
-		return this.blIndex;
-	}
-	,seek: function(point) {
-		var _g = 0;
-		var _g1 = this.critters;
-		while(_g < _g1.length) {
-			var critter = _g1[_g];
-			++_g;
-			critter.seek(point,50,this.settings.maxVel / 2,this.settings.maxAccel / 2);
-		}
+		this.binLatticeIndex.flush(this.critters,this.settings.size);
+		return this.binLatticeIndex;
 	}
 	,enforceBounds: function(critter) {
 		var _this = this.settings.size;
@@ -865,15 +797,31 @@ CritterWorld.prototype = {
 			critter.steer(new kha_math_FastVector2(critter.vel.x,-this.settings.maxVel),force);
 		}
 	}
-	,spawn: function(at) {
-		var tmp = this.critters;
-		var t = Math.random();
-		var _g = (1.0 - t) * -this.settings.maxVel + t * this.settings.maxVel;
-		var t1 = Math.random();
-		tmp.push(new Critter(at,new kha_math_FastVector2(_g,(1.0 - t1) * -this.settings.maxVel + t1 * this.settings.maxVel)));
+	,avoid: function(point,radius) {
+		var _g = 0;
+		var _g1 = this.critters;
+		while(_g < _g1.length) {
+			var critter = _g1[_g];
+			++_g;
+			critter.avoid(point,radius,this.settings.maxVel,this.settings.maxAccel);
+		}
 	}
-	,clear: function() {
+	,respawn: function(N) {
 		this.critters.length = 0;
+		var _g = 0;
+		var _g1 = N;
+		while(_g < _g1) {
+			var _ = _g++;
+			var tmp = this.critters;
+			var t = Math.random();
+			var _g2 = (1.0 - t) * (-this.settings.size.x / 2) + t * (this.settings.size.x / 2);
+			var t1 = Math.random();
+			var _g21 = new kha_math_FastVector2(_g2,(1.0 - t1) * (-this.settings.size.y / 2) + t1 * (this.settings.size.y / 2));
+			var t2 = Math.random();
+			var _g11 = (1.0 - t2) * -this.settings.maxVel + t2 * this.settings.maxVel;
+			var t3 = Math.random();
+			tmp.push(new Critter(_g21,new kha_math_FastVector2(_g11,(1.0 - t3) * -this.settings.maxVel + t3 * this.settings.maxVel)));
+		}
 	}
 	,__class__: CritterWorld
 };
@@ -1004,6 +952,92 @@ Reflect.isFunction = function(f) {
 	} else {
 		return false;
 	}
+};
+var Repulser = function() {
+	this.activeDuration = 0.0;
+	this.maxRadius = 0;
+	this.active = false;
+	this.centeredAt = new kha_math_FastVector2(0,0);
+	this.invProject = new kha_math_FastMatrix3(1,0,0,0,1,0,0,0,1);
+	kha_input_Mouse.get().notify($bind(this,this.onClick),$bind(this,this.onRelease),$bind(this,this.onMove),null);
+};
+$hxClasses["Repulser"] = Repulser;
+Repulser.__name__ = true;
+Repulser.prototype = {
+	invProject: null
+	,centeredAt: null
+	,active: null
+	,maxRadius: null
+	,activeDuration: null
+	,radius: function() {
+		var t = this.activeDuration / 3;
+		var t1 = t < 0 ? 0 : t > 1 ? 1 : t;
+		return (1.0 - t1) * 0 + t1 * this.maxRadius;
+	}
+	,draw: function(g2) {
+		if(!this.active) {
+			return;
+		}
+		this.activeDuration += 0.016666666666666666;
+		var currentRadius = this.radius();
+		var prevX = this.centeredAt.x + currentRadius;
+		var prevY = this.centeredAt.y;
+		var _g = 1;
+		while(_g < 64) {
+			var i = _g++;
+			var t = i / 64;
+			var angle = (1.0 - t) * 0 + t * (Math.PI * 2);
+			var x = this.centeredAt.x + Math.cos(angle) * currentRadius;
+			var y = this.centeredAt.y + Math.sin(angle) * currentRadius;
+			g2.drawLine(prevX,prevY,x,y,4);
+			prevX = x;
+			prevY = y;
+		}
+		g2.drawLine(prevX,prevY,this.centeredAt.x + currentRadius,this.centeredAt.y,4);
+	}
+	,onClick: function(_button,x,y) {
+		var _this = this.invProject;
+		var x1 = x;
+		var y1 = y;
+		if(y1 == null) {
+			y1 = 0;
+		}
+		if(x1 == null) {
+			x1 = 0;
+		}
+		var value_x = x1;
+		var value_y = y1;
+		var w = _this._02 * value_x + _this._12 * value_y + _this._22;
+		var x2 = (_this._00 * value_x + _this._10 * value_y + _this._20) / w;
+		var y2 = (_this._01 * value_x + _this._11 * value_y + _this._21) / w;
+		this.centeredAt = new kha_math_FastVector2(x2,y2);
+		this.active = true;
+		this.activeDuration = 0.0;
+	}
+	,onRelease: function(_button,x,y) {
+		this.active = false;
+		this.activeDuration = 0.0;
+	}
+	,onMove: function(x,y,dx,dy) {
+		if(this.active) {
+			var _this = this.invProject;
+			var x1 = x;
+			var y1 = y;
+			if(y1 == null) {
+				y1 = 0;
+			}
+			if(x1 == null) {
+				x1 = 0;
+			}
+			var value_x = x1;
+			var value_y = y1;
+			var w = _this._02 * value_x + _this._12 * value_y + _this._22;
+			var x2 = (_this._00 * value_x + _this._10 * value_y + _this._20) / w;
+			var y2 = (_this._01 * value_x + _this._11 * value_y + _this._21) / w;
+			this.centeredAt = new kha_math_FastVector2(x2,y2);
+		}
+	}
+	,__class__: Repulser
 };
 var Std = function() { };
 $hxClasses["Std"] = Std;

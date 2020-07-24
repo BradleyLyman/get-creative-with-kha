@@ -13,6 +13,7 @@ var App = function() {
 	this.frameTimes = new support_ds_CircleBuffer(0,30);
 	this.world = new CritterWorld(new Settings(new kha_math_FastVector2(2000,2000),null,null,null));
 	this.maxCritters = 7000;
+	this.minDimSize = 2000;
 	var theme = zui_Themes.dark;
 	theme.FONT_SIZE = 24;
 	this.ui = new zui_Zui({ font : kha_Assets.fonts.NotoSans_Regular, theme : theme});
@@ -22,7 +23,8 @@ var App = function() {
 $hxClasses["App"] = App;
 App.__name__ = true;
 App.prototype = {
-	maxCritters: null
+	minDimSize: null
+	,maxCritters: null
 	,world: null
 	,projection: null
 	,repulser: null
@@ -30,7 +32,7 @@ App.prototype = {
 	,frameTimes: null
 	,respawn: function(n) {
 		var t = n / this.maxCritters;
-		this.world.settings.size.y = (1.0 - t) * 500 + t * 4000;
+		this.minDimSize = (1.0 - t) * 500 + t * 4000;
 		this.world.respawn(Math.round(n));
 	}
 	,update: function() {
@@ -76,7 +78,13 @@ App.prototype = {
 		this.drawUi(screen);
 	}
 	,updateProjection: function(W,H) {
-		this.world.settings.size.x = W / H * this.world.settings.size.y;
+		if(W >= H) {
+			this.world.settings.size.y = this.minDimSize;
+			this.world.settings.size.x = W / H * this.world.settings.size.y;
+		} else {
+			this.world.settings.size.x = this.minDimSize;
+			this.world.settings.size.y = H / W * this.world.settings.size.x;
+		}
 		var bx = this.world.settings.size.x / 2;
 		var by = this.world.settings.size.y / 2;
 		this.projection = new kha_math_FastMatrix3(W / (2 * bx),0,W / 2,0,-H / (2 * by),H / 2,0,0,1);

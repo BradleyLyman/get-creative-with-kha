@@ -1,4 +1,4 @@
-package;
+package index;
 
 import kha.math.FastVector2;
 

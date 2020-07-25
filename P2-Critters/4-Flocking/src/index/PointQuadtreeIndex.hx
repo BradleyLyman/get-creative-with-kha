@@ -1,16 +1,32 @@
-package;
+package index;
 
-import haxe.ds.GenericStack;
 import kha.math.FastVector2;
 
 using support.VecOps;
 
+/**
+  The Point Quadtree Index is a unbounded 'binary' tree of points. Each node
+  contains a single point which divides space into 4 quads. The advantage of
+  this index is that it scales logarithmically (unlike the brute force index)
+  and doesn't require careful tuning (unlike the bin lattice index).
+
+  The principle disadvantage is that the tree is highly sensative to the
+  insertion order for critters. This means that it will occasionally degrade
+  in performance due to how critters are arranged on screen and in memory.
+  This could be mitigated by sorting the critters before inserting them, but
+  then the additional cost of a sort must be paid.
+
+  Finally, even in the best case, this index *typically* checks more critters
+  than a well tuned bin lattice index.
+**/
 class PointQuadtreeIndex implements CritterWorld.Index {
   var pool:Pool;
   var root:Node;
+  var frontier:Array<Node>;
 
   public function new() {
     root = null;
+    frontier = [];
     pool = new Pool();
   }
 
@@ -28,24 +44,56 @@ class PointQuadtreeIndex implements CritterWorld.Index {
     range:Float,
     results:Array<Critter>
   ) {
-    if (root == null) {
-      return;
-    } else {
-      Node.nearby(root, point, range, results);
-      // root.nearby(point, range, results);
+    frontier.resize(0);
+    push(root);
+
+    while (frontier.length > 0) {
+      final current = frontier.pop();
+
+      final length = current.critter.pos.sub(point).sqrLen();
+      if (length <= range * range) {
+        results.push(current.critter);
+        push(current.NW);
+        push(current.NE);
+        push(current.SW);
+        push(current.SE);
+      } else {
+        final left = point.x - range;
+        final right = point.x + range;
+        final top = point.y + range;
+        final bottom = point.y - range;
+        if (right < current.critter.pos.x || left < current.critter.pos.x) {
+          if (top < current.critter.pos.y || bottom < current.critter.pos.y) {
+            push(current.SW);
+          }
+          if (bottom >= current.critter.pos.y || top >= current.critter.pos.y) {
+            push(current.NW);
+          }
+        }
+
+        if (left >= current.critter.pos.x || right >= current.critter.pos.x) {
+          if (top < current.critter.pos.y || bottom < current.critter.pos.y) {
+            push(current.SE);
+          }
+          if (bottom >= current.critter.pos.y || top >= current.critter.pos.y) {
+            push(current.NE);
+          }
+        }
+      }
     }
   }
 
-  public function insert(critter:Critter) {
-    if (root == null) {
-      root = new Node();
-      root.critter = critter;
-    } else {
-      root.insert(critter, pool);
+  private inline function push(node:Node) {
+    if (node != null) {
+      frontier.push(node);
     }
   }
 }
 
+/**
+  Use a pool of nodes to build the tree. This prevents uneeded GC pressure
+  when the tree is rebuilt on each iteration.
+**/
 class Pool {
   var current = 0;
   var nodes:Array<Node> = [];
@@ -87,61 +135,6 @@ class Node {
     SW = null;
     SE = null;
     critter = null;
-  }
-
-  public static function nearby(
-    root:Node,
-    point:FastVector2,
-    range:Float,
-    results:Array<Critter>
-  ) {
-    frontier.resize(0);
-    frontier.push(root);
-
-    while (frontier.length > 0) {
-      final current = frontier.pop();
-
-      final length = current.critter.pos.sub(point).sqrLen();
-      if (length <= range * range) {
-        results.push(current.critter);
-        if (current.NW != null)
-          frontier.push(current.NW);
-        if (current.NE != null)
-          frontier.push(current.NE);
-        if (current.SW != null)
-          frontier.push(current.SW);
-        if (current.SE != null)
-          frontier.push(current.SE);
-      } else {
-        if (point.x + range < current.critter.pos.x
-          || point.x - range < current.critter.pos.x) {
-          if (point.y + range < current.critter.pos.y
-            || point.y - range < current.critter.pos.y) {
-            if (current.SW != null)
-              frontier.push(current.SW);
-          }
-          if (point.y - range >= current.critter.pos.y
-            || point.y + range >= current.critter.pos.y) {
-            if (current.NW != null)
-              frontier.push(current.NW);
-          }
-        }
-
-        if (point.x - range >= current.critter.pos.x
-          || point.x + range >= current.critter.pos.x) {
-          if (point.y + range < current.critter.pos.y
-            || point.y - range < current.critter.pos.y) {
-            if (current.SE != null)
-              frontier.push(current.SE);
-          }
-          if (point.y - range >= current.critter.pos.y
-            || point.y + range >= current.critter.pos.y) {
-            if (current.NE != null)
-              frontier.push(current.NE);
-          }
-        }
-      }
-    }
   }
 
   public function insert(toAdd:Critter, pool:Pool) {

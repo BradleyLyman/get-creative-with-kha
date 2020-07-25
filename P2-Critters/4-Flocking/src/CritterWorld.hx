@@ -59,14 +59,16 @@ class CritterWorld {
 
   public var index(default, null):Index;
 
-  private var binLatticeIndex:BinLatticeIndex;
+  private var binLatticeIndex:index.BinLatticeIndex;
+  private var pointQuadtreeIndex:index.PointQuadtreeIndex;
 
   /* Create a new critter world. */
   public function new(settings:Settings) {
     this.settings = settings;
     critters = [];
-    binLatticeIndex = new BinLatticeIndex(50);
-    index = binLatticeIndex;
+    binLatticeIndex = new index.BinLatticeIndex(50);
+    pointQuadtreeIndex = new index.PointQuadtreeIndex();
+    index = pointQuadtreeIndex;
   }
 
   /**
@@ -118,14 +120,14 @@ class CritterWorld {
     // Reuse the binlattice index, rather than replace it. This allows internal
     // buffers to be resized instead of replaced and should (hopefully) have
     // less GC overhead.
-    binLatticeIndex.flush(critters, settings.size);
-    return binLatticeIndex;
+    // binLatticeIndex.flush(critters, settings.size);
+    // return binLatticeIndex;
 
     // Uncomment to use the Point Quadtree implementation.
     // This simple quadtree outperforms the brute force index, but is still
     // significantly less performant than the tuned BinLattice index.
-    // pointQuadtreeIndex.insertAll(critters);
-    // return pointQuadtreeIndex;
+    pointQuadtreeIndex.insertAll(critters);
+    return pointQuadtreeIndex;
   }
 
   /**

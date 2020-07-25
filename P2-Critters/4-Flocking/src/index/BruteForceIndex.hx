@@ -1,7 +1,6 @@
-package;
+package index;
 
 import kha.math.FastVector2;
-import CritterWorld.Index;
 
 /**
   This index does no preprocessing on the critter array and therefore each
@@ -11,7 +10,7 @@ import CritterWorld.Index;
   but it makes the full simulation's execution speed scale like
   O(critters.length * critters.length).
 **/
-class BruteForceIndex implements Index {
+class BruteForceIndex implements CritterWorld.Index {
   final critters:Array<Critter>;
 
   public function new(critters:Array<Critter>) {

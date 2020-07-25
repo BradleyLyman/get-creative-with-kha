@@ -1,9 +1,8 @@
-# [First App (live demo)](https://bradlyman.github.io/get-creative-with-kha/P0-Kha/1-First-App/)
+# [Epicycles (live demo)](https://bradlyman.github.io/get-creative-with-kha/P3-Signals/1-Epicycles/)
 
-<img src="https://bradlyman.github.io/get-creative-with-kha/P0-Kha/1-First-App/Screenshot.png" width="300" />
+<img src="https://bradlyman.github.io/get-creative-with-kha/P3-Signals/1-Epicycles/Screenshot.png" width="300" />
 
-A short demonstration for getting Kha initialized and graphics on the screen.
-As a nice bonus, the performance is stellar.
+Explore rendering the composition of signals with epicycles.
 
 ## How To Build
 

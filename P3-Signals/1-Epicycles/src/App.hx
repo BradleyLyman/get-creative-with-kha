@@ -1,107 +1,95 @@
 package;
 
+import kha.Color;
+import kha.math.FastMatrix3;
+import kha.math.FastVector2;
 import support.ds.CircleBuffer;
 import kha.Framebuffer;
 
-using Epicycle;
-using support.FloatOps;
+using kha.graphics2.GraphicsExtension;
 
+/**
+  Proof of concept. Draw epicycles to represent the frequency domain of a
+  square wave. The DFT is hard coded so this is just a proof of concept for
+  the rendering.
+**/
 class App {
   var t:Float = 0.0;
-  var cycles:Array<Epicycle> = [];
-  var heights:CircleBuffer<Float>;
+  var signals:Array<Signal> = [];
+  var samples:CircleBuffer<Float>;
 
   public function new() {
-    final x:Array<Float> = [];
-    for (i in 0...200) {
-      x.push(i);
-    }
-    heights = new CircleBuffer<Float>(400, x.length);
+    samples = new CircleBuffer<Float>(0, 200);
 
-    final X = dft(x);
-    final N = X.length;
-    for (k in 0...N) {
-      cycles.push({
-        phase: (k / N) * Math.PI * 2,
-        offset: Math.atan2(X[k].im, X[k].re) + Math.PI / 2,
-        amplitude: 1 / N * Math.sqrt(X[k].re * X[k].re + X[k].im * X[k].im)
+    // hardcoded DFT values for a square wave
+    // https://en.wikipedia.org/wiki/Discrete-time_Fourier_transform
+    final f = 0.25;
+    final w = f * 2.0 * Math.PI;
+    final r = 100;
+    for (k in 0...10) {
+      final n = 2 * k + 1;
+      signals.push({
+        frequency: n * w,
+        phase: 0,
+        amplitude: r * (4.0 / (Math.PI * n))
       });
     }
-    cycles.sort((a, b) -> Math.round(b.amplitude - a.amplitude));
+
+    signals.sort((a, b) -> Math.round(b.amplitude - a.amplitude));
   }
 
-  function dft(signal:Array<Float>):Array<{re:Float, im:Float}> {
-    final N = signal.length;
-    final res:Array<{re:Float, im:Float}> = [];
-    final TWOPIN = Math.PI * 2 / N;
-
-    for (k in 0...signal.length) {
-      var r:Float = 0;
-      var i:Float = 0;
-      for (n in 0...signal.length) {
-        final x = signal[n];
-        r += x * Math.cos(TWOPIN * k * n);
-        i += x * Math.sin(TWOPIN * k * n);
-      }
-      res.push({re: r, im: i});
-    }
-    return res;
-  }
-
-  /**
-    The Kha scheduler attempts to run this every 16 milliseconds so assume a
-    fixed time step.
-  **/
   public function update() {
     t += 1.0 / 60;
   }
 
-  /**
-    The kha scheduler invokes this every time a frame is ready to be rendered.
-    There is only one window for this app so the framebuffer array will always
-    have exactly 1 frame.
-  **/
   public function render(framebuffers:Array<Framebuffer>):Void {
     final screen = framebuffers[0];
+
+    final midline = screen.width / 2;
+
     final g2 = screen.g2;
     g2.begin();
 
-    // propagate centers at time t
-    cycles.propagateCenters({x: screen.width / 8, y: screen.height / 2}, t);
+    final circle = Color.White;
+    circle.A = 0.5;
+    final line = Color.White;
+    line.A = 1.0;
 
-    // draw lines
-    for (i in 1...cycles.length) {
-      final last = cycles[i - 1].center;
-      final now = cycles[i].center;
-      g2.drawLine(last.x, last.y, now.x, now.y, 2);
-    }
-    final last = cycles[cycles.length - 1].center;
-    final now = cycles[cycles.length - 1].sample(t);
-    g2.drawLine(last.x, last.y, now.x, now.y, 2);
-
-    for (cycle in cycles) {
-      cycle.draw(g2, 64);
-    }
-
-    g2.drawLine(now.x, now.y, screen.width / 2, now.y);
-
-    var start = screen.width / 2;
-    var step = (screen.width / 2) / cycles.length;
-    var count = 1;
-    var last = now.y;
-    for (height in heights) {
+    // Draw epicycles
+    final circleStart:FastVector2 = {x: screen.width / 4, y: screen.height / 2};
+    for (signal in signals) {
+      g2.color = circle;
+      g2.drawCircle(circleStart.x, circleStart.y, signal.amplitude, 1.0);
+      final at:FastVector2 = signal.sample(t);
+      g2.color = line;
       g2.drawLine(
-        start + step * (count - 1),
-        last,
-        start + step * count,
-        height
+        circleStart.x,
+        circleStart.y,
+        circleStart.x + at.x,
+        circleStart.y + at.y,
+        2.0
       );
-      last = height;
+      g2.translate(at.x, at.y);
+    }
+    final endpoint = g2.transformation.multvec(circleStart);
+    g2.transformation = FastMatrix3.identity();
+
+    // connect to the plot
+    g2.drawLine(endpoint.x, endpoint.y, midline, endpoint.y);
+
+    // draw the plot
+    final step:Float = (screen.width / 2.0) / samples.length;
+    var lastX:Float = midline;
+    var lastY:Float = endpoint.y;
+    var count:Int = 1;
+    for (sample in samples) {
+      g2.drawLine(lastX, lastY, count * step + midline, sample);
+      lastX = count * step + midline;
+      lastY = sample;
       count++;
     }
 
+    samples.push(endpoint.y);
     g2.end();
-
-    heights.push(now.y);
   }
 }

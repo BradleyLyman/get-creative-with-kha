@@ -60,15 +60,13 @@ class CritterWorld {
   public var index(default, null):Index;
 
   private var binLatticeIndex:BinLatticeIndex;
-  private var pointQuadtreeIndex:PointQuadtreeIndex;
 
   /* Create a new critter world. */
   public function new(settings:Settings) {
     this.settings = settings;
     critters = [];
     binLatticeIndex = new BinLatticeIndex(50);
-    pointQuadtreeIndex = new PointQuadtreeIndex();
-    index = pointQuadtreeIndex;
+    index = binLatticeIndex;
   }
 
   /**
@@ -92,7 +90,7 @@ class CritterWorld {
       // Apply the flocking algorithm forces radii and multipliers are
       // arbitrarily chosen based on what looks good
       critter.align(nearby, settings.maxVel, settings.maxAccel * 0.75);
-      critter.seekCenter(nearby, 50, settings.maxVel, settings.maxAccel * 0.5);
+      critter.seekCenter(nearby, 50, settings.maxVel, settings.maxAccel * 0.7);
       critter.avoidAll(nearby, 35, settings.maxVel, settings.maxAccel);
 
       // kinematic integration (euler's method)
@@ -120,14 +118,14 @@ class CritterWorld {
     // Reuse the binlattice index, rather than replace it. This allows internal
     // buffers to be resized instead of replaced and should (hopefully) have
     // less GC overhead.
-    // binLatticeIndex.flush(critters, settings.size);
-    // return binLatticeIndex;
+    binLatticeIndex.flush(critters, settings.size);
+    return binLatticeIndex;
 
     // Uncomment to use the Point Quadtree implementation.
     // This simple quadtree outperforms the brute force index, but is still
     // significantly less performant than the tuned BinLattice index.
-    pointQuadtreeIndex.insertAll(critters);
-    return pointQuadtreeIndex;
+    // pointQuadtreeIndex.insertAll(critters);
+    // return pointQuadtreeIndex;
   }
 
   /**

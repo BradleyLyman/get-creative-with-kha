@@ -154,8 +154,9 @@ class Critter {
       if (dist > repulseThreshold || dist == 0) {
         continue;
       }
-      runDirection.x += diff.x / dist;
-      runDirection.y += diff.y / dist;
+      final weight = (repulseThreshold / dist);
+      runDirection.x += (diff.x / dist) * weight * weight;
+      runDirection.y += (diff.y / dist) * weight * weight;
       targetsAvoided += 1;
     }
     if (targetsAvoided > 0) {

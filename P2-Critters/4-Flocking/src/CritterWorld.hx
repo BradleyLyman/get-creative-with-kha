@@ -61,14 +61,16 @@ class CritterWorld {
 
   private var binLatticeIndex:index.BinLatticeIndex;
   private var pointQuadtreeIndex:index.PointQuadtreeIndex;
+  private var prQuadtrieIndex:index.PRQuadtrieIndex;
 
   /* Create a new critter world. */
   public function new(settings:Settings) {
     this.settings = settings;
     critters = [];
-    binLatticeIndex = new index.BinLatticeIndex(50);
+    binLatticeIndex = new index.BinLatticeIndex(75);
     pointQuadtreeIndex = new index.PointQuadtreeIndex();
-    index = pointQuadtreeIndex;
+    prQuadtrieIndex = new index.PRQuadtrieIndex();
+    index = prQuadtrieIndex;
   }
 
   /**
@@ -87,7 +89,7 @@ class CritterWorld {
     for (critter in critters) {
       // lookup all critters within 50 units of this one
       nearby.resize(0); // reuse the nearby array to lessen GC pressure
-      index.nearby(critter.pos, 50, nearby);
+      index.nearby(critter.pos, 75, nearby);
 
       // Apply the flocking algorithm forces radii and multipliers are
       // arbitrarily chosen based on what looks good
@@ -108,26 +110,16 @@ class CritterWorld {
   }
 
   private function buildIndex():Index {
-    // switch with this line to see the proof of concept index
-    // performance degrades with the square of the number of critters
     // return new BruteForceIndex(critters);
 
-    // switch to this line to see the simplest implementation for the bin
-    // lattice index. Creating it each frame introduces GC churn which will
-    // cause periodic stuttering
-    // return new BinLatticeIndex(critters, 50, settings.size);
+    // pointQuadtreeIndex.insertAll(critters);
+    // return pointQuadtreeIndex;
 
-    // Reuse the binlattice index, rather than replace it. This allows internal
-    // buffers to be resized instead of replaced and should (hopefully) have
-    // less GC overhead.
-    // binLatticeIndex.flush(critters, settings.size);
-    // return binLatticeIndex;
+    // prQuadtrieIndex.refill(critters, settings.size);
+    // return prQuadtrieIndex;
 
-    // Uncomment to use the Point Quadtree implementation.
-    // This simple quadtree outperforms the brute force index, but is still
-    // significantly less performant than the tuned BinLattice index.
-    pointQuadtreeIndex.insertAll(critters);
-    return pointQuadtreeIndex;
+    binLatticeIndex.flush(critters, settings.size);
+    return binLatticeIndex;
   }
 
   /**

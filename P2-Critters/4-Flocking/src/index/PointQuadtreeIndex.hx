@@ -44,6 +44,9 @@ class PointQuadtreeIndex implements CritterWorld.Index {
     range:Float,
     results:Array<Critter>
   ) {
+    if (root.critter == null) {
+      return;
+    }
     frontier.resize(0);
     push(root);
 

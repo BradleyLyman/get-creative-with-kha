@@ -19,8 +19,9 @@ typedef Critters = Array<Critter>;
   on memory requirements, but once the bins are too large the benefits are
   reduced.
 
-  This demo has tuned the resolution to equal the seach radius. This performs
-  pretty well most of the time.
+  This demo has tuned the resolution to equal the seach radius. The simple
+  construction and indexing means that this index typically outperforms the
+  other tree methods in CPU time (if not memory).
 **/
 class BinLatticeIndex implements CritterWorld.Index {
   final resolution:Float;

@@ -1,5 +1,6 @@
 package;
 
+import kha.Color;
 import haxe.Timer;
 import zui.Id;
 import kha.Assets;
@@ -38,7 +39,7 @@ class App {
     ui = new Zui({font: Assets.fonts.NotoSans_Regular, theme: theme});
 
     repulser = new Repulser();
-    minDimSize = (critterCount / maxCritters).lerp(500, 3000);
+    minDimSize = (critterCount / maxCritters).lerp(500, 4000);
   }
 
   /** Ask the world to integrate and record the time it took. **/
@@ -64,6 +65,7 @@ class App {
     final g2 = screen.g2;
     g2.begin();
     g2.pushTransformation(projection);
+    g2.color = Color.White;
     for (critter in world.critters) {
       critter.draw(g2);
     }
@@ -116,7 +118,7 @@ class App {
         );
         if (ui.button("Respawn")) {
           critterCount = sliderValue.round();
-          minDimSize = (critterCount / maxCritters).lerp(500, 3000);
+          minDimSize = (critterCount / maxCritters).lerp(500, 4000);
           needsRespawn = true;
         }
       }

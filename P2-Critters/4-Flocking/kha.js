@@ -21,7 +21,7 @@ var App = function() {
 	this.ui = new zui_Zui({ font : kha_Assets.fonts.NotoSans_Regular, theme : theme});
 	this.repulser = new Repulser();
 	var t = this.critterCount / this.maxCritters;
-	this.minDimSize = (1.0 - t) * 500 + t * 3000;
+	this.minDimSize = (1.0 - t) * 500 + t * 4000;
 };
 $hxClasses["App"] = App;
 App.__name__ = true;
@@ -68,6 +68,7 @@ App.prototype = {
 		_this._12 = trans._12;
 		_this._22 = trans._22;
 		g2.setTransformation(g2.transformations[g2.transformationIndex]);
+		g2.set_color(-1);
 		var _g = 0;
 		var _g1 = this.world.critters;
 		while(_g < _g1.length) {
@@ -125,7 +126,7 @@ App.prototype = {
 				if(this.ui.button("Respawn")) {
 					this.critterCount = Math.round(sliderValue);
 					var t1 = this.critterCount / this.maxCritters;
-					this.minDimSize = (1.0 - t1) * 500 + t1 * 3000;
+					this.minDimSize = (1.0 - t1) * 500 + t1 * 4000;
 					this.needsRespawn = true;
 				}
 			}
@@ -146,148 +147,6 @@ App.prototype = {
 		return sum / this.frameTimes.get_length() * 1000;
 	}
 	,__class__: App
-};
-var Index = function() { };
-$hxClasses["Index"] = Index;
-Index.__name__ = true;
-Index.__isInterface__ = true;
-Index.prototype = {
-	nearby: null
-	,__class__: Index
-};
-var BinLatticeIndex = function(resolution) {
-	this.size = new kha_math_FastVector2(0,0);
-	this.cols = 0;
-	this.rows = 0;
-	this.resolution = resolution;
-	this.bins = [];
-};
-$hxClasses["BinLatticeIndex"] = BinLatticeIndex;
-BinLatticeIndex.__name__ = true;
-BinLatticeIndex.__interfaces__ = [Index];
-BinLatticeIndex.prototype = {
-	resolution: null
-	,bins: null
-	,rows: null
-	,cols: null
-	,size: null
-	,flush: function(critters,size) {
-		this.resize(size);
-		this.resetCritters(critters);
-	}
-	,nearby: function(point,distance,out) {
-		var sqdistance = distance * distance;
-		var _this = this.size;
-		var value = 0.5;
-		var x = _this.x * value;
-		var y = _this.y * value;
-		if(y == null) {
-			y = 0;
-		}
-		if(x == null) {
-			x = 0;
-		}
-		var vec_x = x;
-		var vec_y = y;
-		var x1 = point.x + vec_x;
-		var y1 = point.y + vec_y;
-		if(y1 == null) {
-			y1 = 0;
-		}
-		if(x1 == null) {
-			x1 = 0;
-		}
-		var transformed_x = x1;
-		var transformed_y = y1;
-		var sX = Math.round(transformed_x / this.resolution);
-		var sY = Math.round(transformed_y / this.resolution);
-		var searchRadius = Math.ceil(distance / this.resolution);
-		var _g = sX - searchRadius;
-		var _g1 = sX + searchRadius;
-		while(_g < _g1) {
-			var col = _g++;
-			var _g2 = sY - searchRadius;
-			var _g11 = sY + searchRadius;
-			while(_g2 < _g11) {
-				var row = _g2++;
-				if(!this.inBounds(col,row)) {
-					continue;
-				}
-				var _g3 = 0;
-				var _g12 = this.bins[col + row * this.cols];
-				while(_g3 < _g12.length) {
-					var critter = _g12[_g3];
-					++_g3;
-					var dx = critter.pos.x - point.x;
-					var dy = critter.pos.y - point.y;
-					if(dx * dx + dy * dy <= sqdistance) {
-						out.push(critter);
-					}
-				}
-			}
-		}
-	}
-	,resize: function(size) {
-		this.size = size;
-		this.cols = Math.ceil(size.x / this.resolution) + 1;
-		this.rows = Math.ceil(size.y / this.resolution) + 1;
-		this.bins.length = this.cols * this.rows;
-		var _g = 0;
-		var _g1 = this.bins.length;
-		while(_g < _g1) {
-			var i = _g++;
-			if(this.bins[i] == null) {
-				this.bins[i] = [];
-			} else {
-				this.bins[i].length = 0;
-			}
-		}
-	}
-	,resetCritters: function(critters) {
-		var _g = 0;
-		while(_g < critters.length) {
-			var critter = critters[_g];
-			++_g;
-			var _this = critter.pos;
-			var _this1 = this.size;
-			var value = 0.5;
-			var x = _this1.x * value;
-			var y = _this1.y * value;
-			if(y == null) {
-				y = 0;
-			}
-			if(x == null) {
-				x = 0;
-			}
-			var vec_x = x;
-			var vec_y = y;
-			var x1 = _this.x + vec_x;
-			var y1 = _this.y + vec_y;
-			if(y1 == null) {
-				y1 = 0;
-			}
-			if(x1 == null) {
-				x1 = 0;
-			}
-			var pos_x = x1;
-			var pos_y = y1;
-			var snapX = Math.floor(pos_x / this.resolution);
-			var snapY = Math.floor(pos_y / this.resolution);
-			this.bins[snapX + snapY * this.cols].push(critter);
-		}
-	}
-	,inBounds: function(col,row) {
-		if(row >= 0 && col >= 0) {
-			if(col < this.cols) {
-				return row < this.rows;
-			} else {
-				return false;
-			}
-		} else {
-			return false;
-		}
-	}
-	,__class__: BinLatticeIndex
 };
 var Critter = function(pos,vel) {
 	this.pos = pos;
@@ -539,8 +398,9 @@ Critter.prototype = {
 			if(dist > repulseThreshold || dist == 0) {
 				continue;
 			}
-			runDirection_x += diff_x / dist;
-			runDirection_y += diff_y / dist;
+			var weight = repulseThreshold / dist;
+			runDirection_x += diff_x / dist * weight * weight;
+			runDirection_y += diff_y / dist * weight * weight;
 			++targetsAvoided;
 		}
 		if(targetsAvoided > 0) {
@@ -862,17 +722,31 @@ Settings.prototype = {
 	,integrationSeconds: null
 	,__class__: Settings
 };
+var Index = function() { };
+$hxClasses["Index"] = Index;
+Index.__name__ = true;
+Index.__isInterface__ = true;
+Index.prototype = {
+	nearby: null
+	,__class__: Index
+};
 var CritterWorld = function(settings) {
 	this.settings = settings;
 	this.critters = [];
-	this.binLatticeIndex = new BinLatticeIndex(50);
+	this.binLatticeIndex = new index_BinLatticeIndex(75);
+	this.pointQuadtreeIndex = new index_PointQuadtreeIndex();
+	this.prQuadtrieIndex = new index_PRQuadtrieIndex();
+	this.index = this.prQuadtrieIndex;
 };
 $hxClasses["CritterWorld"] = CritterWorld;
 CritterWorld.__name__ = true;
 CritterWorld.prototype = {
 	settings: null
 	,critters: null
+	,index: null
 	,binLatticeIndex: null
+	,pointQuadtreeIndex: null
+	,prQuadtrieIndex: null
 	,integrate: function() {
 		var _g = 0;
 		var _g1 = this.critters;
@@ -881,7 +755,7 @@ CritterWorld.prototype = {
 			++_g;
 			this.enforceBounds(critter);
 		}
-		var index = this.buildIndex();
+		this.index = this.buildIndex();
 		var dt = this.settings.integrationSeconds;
 		var nearby = [];
 		var _g2 = 0;
@@ -890,9 +764,9 @@ CritterWorld.prototype = {
 			var critter1 = _g3[_g2];
 			++_g2;
 			nearby.length = 0;
-			index.nearby(critter1.pos,50,nearby);
+			this.index.nearby(critter1.pos,75,nearby);
 			critter1.align(nearby,this.settings.maxVel,this.settings.maxAccel * 0.75);
-			critter1.seekCenter(nearby,50,this.settings.maxVel,this.settings.maxAccel * 0.5);
+			critter1.seekCenter(nearby,50,this.settings.maxVel,this.settings.maxAccel * 0.7);
 			critter1.avoidAll(nearby,35,this.settings.maxVel,this.settings.maxAccel);
 			var vec = critter1.acc;
 			var length = this.settings.maxAccel;
@@ -2562,6 +2436,644 @@ haxe_io__$UInt8Array_UInt8Array_$Impl_$.fromBytes = function(bytes,bytePos,lengt
 		length = bytes.length - bytePos;
 	}
 	return new Uint8Array(bytes.b.bufferValue,bytePos,length);
+};
+var index_BinLatticeIndex = function(resolution) {
+	this.size = new kha_math_FastVector2(0,0);
+	this.cols = 0;
+	this.rows = 0;
+	this.resolution = resolution;
+	this.bins = [];
+};
+$hxClasses["index.BinLatticeIndex"] = index_BinLatticeIndex;
+index_BinLatticeIndex.__name__ = true;
+index_BinLatticeIndex.__interfaces__ = [Index];
+index_BinLatticeIndex.prototype = {
+	resolution: null
+	,bins: null
+	,rows: null
+	,cols: null
+	,size: null
+	,flush: function(critters,size) {
+		this.resize(size);
+		this.resetCritters(critters);
+	}
+	,nearby: function(point,distance,out) {
+		var sqdistance = distance * distance;
+		var _this = this.size;
+		var value = 0.5;
+		var x = _this.x * value;
+		var y = _this.y * value;
+		if(y == null) {
+			y = 0;
+		}
+		if(x == null) {
+			x = 0;
+		}
+		var vec_x = x;
+		var vec_y = y;
+		var x1 = point.x + vec_x;
+		var y1 = point.y + vec_y;
+		if(y1 == null) {
+			y1 = 0;
+		}
+		if(x1 == null) {
+			x1 = 0;
+		}
+		var transformed_x = x1;
+		var transformed_y = y1;
+		var sX = Math.round(transformed_x / this.resolution);
+		var sY = Math.round(transformed_y / this.resolution);
+		var searchRadius = Math.ceil(distance / this.resolution);
+		var _g = sX - searchRadius;
+		var _g1 = sX + searchRadius;
+		while(_g < _g1) {
+			var col = _g++;
+			var _g2 = sY - searchRadius;
+			var _g11 = sY + searchRadius;
+			while(_g2 < _g11) {
+				var row = _g2++;
+				if(!this.inBounds(col,row)) {
+					continue;
+				}
+				var _g3 = 0;
+				var _g12 = this.bins[col + row * this.cols];
+				while(_g3 < _g12.length) {
+					var critter = _g12[_g3];
+					++_g3;
+					var dx = critter.pos.x - point.x;
+					var dy = critter.pos.y - point.y;
+					if(dx * dx + dy * dy <= sqdistance) {
+						out.push(critter);
+					}
+				}
+			}
+		}
+	}
+	,resize: function(size) {
+		this.size = size;
+		this.cols = Math.ceil(size.x / this.resolution) + 1;
+		this.rows = Math.ceil(size.y / this.resolution) + 1;
+		this.bins.length = this.cols * this.rows;
+		var _g = 0;
+		var _g1 = this.bins.length;
+		while(_g < _g1) {
+			var i = _g++;
+			if(this.bins[i] == null) {
+				this.bins[i] = [];
+			} else {
+				this.bins[i].length = 0;
+			}
+		}
+	}
+	,resetCritters: function(critters) {
+		var _g = 0;
+		while(_g < critters.length) {
+			var critter = critters[_g];
+			++_g;
+			var _this = critter.pos;
+			var _this1 = this.size;
+			var value = 0.5;
+			var x = _this1.x * value;
+			var y = _this1.y * value;
+			if(y == null) {
+				y = 0;
+			}
+			if(x == null) {
+				x = 0;
+			}
+			var vec_x = x;
+			var vec_y = y;
+			var x1 = _this.x + vec_x;
+			var y1 = _this.y + vec_y;
+			if(y1 == null) {
+				y1 = 0;
+			}
+			if(x1 == null) {
+				x1 = 0;
+			}
+			var pos_x = x1;
+			var pos_y = y1;
+			var snapX = Math.floor(pos_x / this.resolution);
+			var snapY = Math.floor(pos_y / this.resolution);
+			this.bins[snapX + snapY * this.cols].push(critter);
+		}
+	}
+	,inBounds: function(col,row) {
+		if(row >= 0 && col >= 0) {
+			if(col < this.cols) {
+				return row < this.rows;
+			} else {
+				return false;
+			}
+		} else {
+			return false;
+		}
+	}
+	,__class__: index_BinLatticeIndex
+};
+var index_PRQuadtrieIndex = function() {
+	this.frontier = [];
+	this.pool = new index_QuadPool();
+	this.root = null;
+};
+$hxClasses["index.PRQuadtrieIndex"] = index_PRQuadtrieIndex;
+index_PRQuadtrieIndex.__name__ = true;
+index_PRQuadtrieIndex.__interfaces__ = [Index];
+index_PRQuadtrieIndex.prototype = {
+	root: null
+	,pool: null
+	,frontier: null
+	,refill: function(critters,size) {
+		this.pool.reset(critters.length);
+		this.root = this.pool.next();
+		this.root.x = 0;
+		this.root.y = 0;
+		this.root.halfW = size.x / 2;
+		this.root.halfH = size.y / 2;
+		var _g = 0;
+		while(_g < critters.length) {
+			var critter = critters[_g];
+			++_g;
+			this.root.insert(critter,this.pool);
+		}
+	}
+	,nearby: function(point,range,out) {
+		if(this.root == null) {
+			return;
+		}
+		this.frontier.length = 0;
+		this.frontier.push(this.root);
+		while(this.frontier.length > 0) {
+			var current = this.frontier.pop();
+			if(current.NE == null) {
+				var _g = 0;
+				var _g1 = current.bucket;
+				while(_g < _g1.length) {
+					var critter = _g1[_g];
+					++_g;
+					var _this = critter.pos;
+					var x = _this.x - point.x;
+					var y = _this.y - point.y;
+					if(y == null) {
+						y = 0;
+					}
+					if(x == null) {
+						x = 0;
+					}
+					var vec_x = x;
+					var vec_y = y;
+					var sqlen = vec_x * vec_x + vec_y * vec_y;
+					if(sqlen <= range * range) {
+						out.push(critter);
+					}
+				}
+			} else {
+				var quad = current.NW;
+				var sMaxY = point.y + range;
+				var sMinY = point.y - range;
+				var sMaxX = point.x + range;
+				var sMinX = point.x - range;
+				var maxY = quad.y + quad.halfH;
+				var minY = quad.y - quad.halfH;
+				var maxX = quad.x + quad.halfW;
+				var minX = quad.x - quad.halfW;
+				if(sMaxX < minX || sMinX > maxX ? false : sMaxY < minY || sMinY > maxY ? false : true) {
+					this.frontier.push(quad);
+				}
+				var quad1 = current.NE;
+				var sMaxY1 = point.y + range;
+				var sMinY1 = point.y - range;
+				var sMaxX1 = point.x + range;
+				var sMinX1 = point.x - range;
+				var maxY1 = quad1.y + quad1.halfH;
+				var minY1 = quad1.y - quad1.halfH;
+				var maxX1 = quad1.x + quad1.halfW;
+				var minX1 = quad1.x - quad1.halfW;
+				if(sMaxX1 < minX1 || sMinX1 > maxX1 ? false : sMaxY1 < minY1 || sMinY1 > maxY1 ? false : true) {
+					this.frontier.push(quad1);
+				}
+				var quad2 = current.SW;
+				var sMaxY2 = point.y + range;
+				var sMinY2 = point.y - range;
+				var sMaxX2 = point.x + range;
+				var sMinX2 = point.x - range;
+				var maxY2 = quad2.y + quad2.halfH;
+				var minY2 = quad2.y - quad2.halfH;
+				var maxX2 = quad2.x + quad2.halfW;
+				var minX2 = quad2.x - quad2.halfW;
+				if(sMaxX2 < minX2 || sMinX2 > maxX2 ? false : sMaxY2 < minY2 || sMinY2 > maxY2 ? false : true) {
+					this.frontier.push(quad2);
+				}
+				var quad3 = current.SE;
+				var sMaxY3 = point.y + range;
+				var sMinY3 = point.y - range;
+				var sMaxX3 = point.x + range;
+				var sMinX3 = point.x - range;
+				var maxY3 = quad3.y + quad3.halfH;
+				var minY3 = quad3.y - quad3.halfH;
+				var maxX3 = quad3.x + quad3.halfW;
+				var minX3 = quad3.x - quad3.halfW;
+				if(sMaxX3 < minX3 || sMinX3 > maxX3 ? false : sMaxY3 < minY3 || sMinY3 > maxY3 ? false : true) {
+					this.frontier.push(quad3);
+				}
+			}
+		}
+	}
+	,push: function(quad,point,range) {
+		var sMaxY = point.y + range;
+		var sMinY = point.y - range;
+		var sMaxX = point.x + range;
+		var sMinX = point.x - range;
+		var maxY = quad.y + quad.halfH;
+		var minY = quad.y - quad.halfH;
+		var maxX = quad.x + quad.halfW;
+		var minX = quad.x - quad.halfW;
+		if(sMaxX < minX || sMinX > maxX ? false : sMaxY < minY || sMinY > maxY ? false : true) {
+			this.frontier.push(quad);
+		}
+	}
+	,__class__: index_PRQuadtrieIndex
+};
+var index_QuadPool = function() {
+	this.quads = [];
+	this.current = 0;
+};
+$hxClasses["index.QuadPool"] = index_QuadPool;
+index_QuadPool.__name__ = true;
+index_QuadPool.prototype = {
+	current: null
+	,quads: null
+	,reset: function(hint) {
+		var _g = 0;
+		var _g1 = this.quads;
+		while(_g < _g1.length) {
+			var quad = _g1[_g];
+			++_g;
+			quad.reset();
+		}
+		while(this.quads.length < hint / index_Quad.MAX) this.quads.push(new index_Quad());
+		this.current = 0;
+	}
+	,next: function() {
+		if(this.current >= this.quads.length) {
+			this.quads.push(new index_Quad());
+		}
+		return this.quads[this.current++];
+	}
+	,__class__: index_QuadPool
+};
+var index_Quad = function() {
+	this.SW = null;
+	this.SE = null;
+	this.NW = null;
+	this.NE = null;
+	this.bucket = [];
+	this.halfH = 0;
+	this.halfW = 0;
+	this.y = 0;
+	this.x = 0;
+};
+$hxClasses["index.Quad"] = index_Quad;
+index_Quad.__name__ = true;
+index_Quad.prototype = {
+	x: null
+	,y: null
+	,halfW: null
+	,halfH: null
+	,bucket: null
+	,NE: null
+	,NW: null
+	,SE: null
+	,SW: null
+	,reset: function() {
+		this.x = 0;
+		this.y = 0;
+		this.halfH = 0;
+		this.halfW = 0;
+		this.bucket.length = 0;
+		this.NE = null;
+		this.NW = null;
+		this.SE = null;
+		this.SW = null;
+	}
+	,isLeaf: function() {
+		return this.NE == null;
+	}
+	,insert: function(critter,pool) {
+		var point = critter.pos;
+		var sMaxY = point.y;
+		var sMinY = point.y;
+		var sMaxX = point.x;
+		var sMinX = point.x;
+		var maxY = this.y + this.halfH;
+		var minY = this.y - this.halfH;
+		var maxX = this.x + this.halfW;
+		var minX = this.x - this.halfW;
+		if(!(sMaxX < minX || sMinX > maxX ? false : sMaxY < minY || sMinY > maxY ? false : true)) {
+			return false;
+		}
+		if(this.NE == null && this.bucket.length < index_Quad.MAX) {
+			this.bucket.push(critter);
+			return true;
+		}
+		if(this.NE == null) {
+			this.NE = pool.next();
+			this.NE.x = this.x + this.halfW / 2;
+			this.NE.y = this.y + this.halfH / 2;
+			this.NE.halfW = this.halfW / 2;
+			this.NE.halfH = this.halfH / 2;
+			this.NW = pool.next();
+			this.NW.x = this.x - this.halfW / 2;
+			this.NW.y = this.y + this.halfH / 2;
+			this.NW.halfW = this.halfW / 2;
+			this.NW.halfH = this.halfH / 2;
+			this.SE = pool.next();
+			this.SE.x = this.x + this.halfW / 2;
+			this.SE.y = this.y - this.halfH / 2;
+			this.SE.halfW = this.halfW / 2;
+			this.SE.halfH = this.halfH / 2;
+			this.SW = pool.next();
+			this.SW.x = this.x - this.halfW / 2;
+			this.SW.y = this.y - this.halfH / 2;
+			this.SW.halfW = this.halfW / 2;
+			this.SW.halfH = this.halfH / 2;
+			var critter1 = this.bucket.pop();
+			while(critter1 != null && (this.NE.insert(critter1,pool) || this.NW.insert(critter1,pool) || this.SE.insert(critter1,pool) || this.SW.insert(critter1,pool))) critter1 = this.bucket.pop();
+			this.bucket.length = 0;
+		}
+		if(!(this.NE.insert(critter,pool) || this.NW.insert(critter,pool) || this.SE.insert(critter,pool))) {
+			return this.SW.insert(critter,pool);
+		} else {
+			return true;
+		}
+	}
+	,subdivide: function(pool) {
+		this.NE = pool.next();
+		this.NE.x = this.x + this.halfW / 2;
+		this.NE.y = this.y + this.halfH / 2;
+		this.NE.halfW = this.halfW / 2;
+		this.NE.halfH = this.halfH / 2;
+		this.NW = pool.next();
+		this.NW.x = this.x - this.halfW / 2;
+		this.NW.y = this.y + this.halfH / 2;
+		this.NW.halfW = this.halfW / 2;
+		this.NW.halfH = this.halfH / 2;
+		this.SE = pool.next();
+		this.SE.x = this.x + this.halfW / 2;
+		this.SE.y = this.y - this.halfH / 2;
+		this.SE.halfW = this.halfW / 2;
+		this.SE.halfH = this.halfH / 2;
+		this.SW = pool.next();
+		this.SW.x = this.x - this.halfW / 2;
+		this.SW.y = this.y - this.halfH / 2;
+		this.SW.halfW = this.halfW / 2;
+		this.SW.halfH = this.halfH / 2;
+		var critter = this.bucket.pop();
+		while(critter != null && (this.NE.insert(critter,pool) || this.NW.insert(critter,pool) || this.SE.insert(critter,pool) || this.SW.insert(critter,pool))) critter = this.bucket.pop();
+		this.bucket.length = 0;
+	}
+	,intersects: function(point,range) {
+		var sMaxY = point.y + range;
+		var sMinY = point.y - range;
+		var sMaxX = point.x + range;
+		var sMinX = point.x - range;
+		var maxY = this.y + this.halfH;
+		var minY = this.y - this.halfH;
+		var maxX = this.x + this.halfW;
+		var minX = this.x - this.halfW;
+		if(sMaxX < minX || sMinX > maxX) {
+			return false;
+		}
+		if(sMaxY < minY || sMinY > maxY) {
+			return false;
+		}
+		return true;
+	}
+	,__class__: index_Quad
+};
+var index_PointQuadtreeIndex = function() {
+	this.root = null;
+	this.frontier = [];
+	this.pool = new index_Pool();
+};
+$hxClasses["index.PointQuadtreeIndex"] = index_PointQuadtreeIndex;
+index_PointQuadtreeIndex.__name__ = true;
+index_PointQuadtreeIndex.__interfaces__ = [Index];
+index_PointQuadtreeIndex.prototype = {
+	pool: null
+	,root: null
+	,frontier: null
+	,insertAll: function(critters) {
+		this.pool.reset(critters.length);
+		this.root = this.pool.next();
+		this.root.critter = critters[0];
+		var _g = 1;
+		var _g1 = critters.length;
+		while(_g < _g1) {
+			var i = _g++;
+			this.root.insert(critters[i],this.pool);
+		}
+	}
+	,nearby: function(point,range,results) {
+		if(this.root.critter == null) {
+			return;
+		}
+		this.frontier.length = 0;
+		var node = this.root;
+		if(node != null) {
+			this.frontier.push(node);
+		}
+		while(this.frontier.length > 0) {
+			var current = this.frontier.pop();
+			var _this = current.critter.pos;
+			var x = _this.x - point.x;
+			var y = _this.y - point.y;
+			if(y == null) {
+				y = 0;
+			}
+			if(x == null) {
+				x = 0;
+			}
+			var vec_x = x;
+			var vec_y = y;
+			var length = vec_x * vec_x + vec_y * vec_y;
+			if(length <= range * range) {
+				results.push(current.critter);
+				var node1 = current.NW;
+				if(node1 != null) {
+					this.frontier.push(node1);
+				}
+				var node2 = current.NE;
+				if(node2 != null) {
+					this.frontier.push(node2);
+				}
+				var node3 = current.SW;
+				if(node3 != null) {
+					this.frontier.push(node3);
+				}
+				var node4 = current.SE;
+				if(node4 != null) {
+					this.frontier.push(node4);
+				}
+			} else {
+				var left = point.x - range;
+				var right = point.x + range;
+				var top = point.y + range;
+				var bottom = point.y - range;
+				if(right < current.critter.pos.x || left < current.critter.pos.x) {
+					if(top < current.critter.pos.y || bottom < current.critter.pos.y) {
+						var node5 = current.SW;
+						if(node5 != null) {
+							this.frontier.push(node5);
+						}
+					}
+					if(bottom >= current.critter.pos.y || top >= current.critter.pos.y) {
+						var node6 = current.NW;
+						if(node6 != null) {
+							this.frontier.push(node6);
+						}
+					}
+				}
+				if(left >= current.critter.pos.x || right >= current.critter.pos.x) {
+					if(top < current.critter.pos.y || bottom < current.critter.pos.y) {
+						var node7 = current.SE;
+						if(node7 != null) {
+							this.frontier.push(node7);
+						}
+					}
+					if(bottom >= current.critter.pos.y || top >= current.critter.pos.y) {
+						var node8 = current.NE;
+						if(node8 != null) {
+							this.frontier.push(node8);
+						}
+					}
+				}
+			}
+		}
+	}
+	,push: function(node) {
+		if(node != null) {
+			this.frontier.push(node);
+		}
+	}
+	,__class__: index_PointQuadtreeIndex
+};
+var index_Pool = function() {
+	this.nodes = [];
+	this.current = 0;
+};
+$hxClasses["index.Pool"] = index_Pool;
+index_Pool.__name__ = true;
+index_Pool.prototype = {
+	current: null
+	,nodes: null
+	,reset: function(hint) {
+		var _g = 0;
+		var _g1 = this.nodes;
+		while(_g < _g1.length) {
+			var node = _g1[_g];
+			++_g;
+			node.NW = null;
+			node.NE = null;
+			node.SW = null;
+			node.SE = null;
+			node.critter = null;
+		}
+		while(this.nodes.length < hint) this.nodes.push(new index_Node());
+		this.current = 0;
+	}
+	,next: function() {
+		if(this.current >= this.nodes.length) {
+			this.nodes.push(new index_Node());
+		}
+		return this.nodes[this.current++];
+	}
+	,__class__: index_Pool
+};
+var index_Node = function() {
+	this.critter = null;
+	this.SE = null;
+	this.SW = null;
+	this.NE = null;
+	this.NW = null;
+};
+$hxClasses["index.Node"] = index_Node;
+index_Node.__name__ = true;
+index_Node.prototype = {
+	NW: null
+	,NE: null
+	,SW: null
+	,SE: null
+	,critter: null
+	,reset: function() {
+		this.NW = null;
+		this.NE = null;
+		this.SW = null;
+		this.SE = null;
+		this.critter = null;
+	}
+	,insert: function(toAdd,pool) {
+		if(toAdd.pos.x < this.critter.pos.x) {
+			if(toAdd.pos.y < this.critter.pos.y) {
+				if(this.SW == null) {
+					this.SW = pool.next();
+					this.SW.critter = toAdd;
+				} else {
+					this.SW.insert(toAdd,pool);
+				}
+			} else if(this.NW == null) {
+				this.NW = pool.next();
+				this.NW.critter = toAdd;
+			} else {
+				this.NW.insert(toAdd,pool);
+			}
+		} else if(toAdd.pos.y < this.critter.pos.y) {
+			if(this.SE == null) {
+				this.SE = pool.next();
+				this.SE.critter = toAdd;
+			} else {
+				this.SE.insert(toAdd,pool);
+			}
+		} else if(this.NE == null) {
+			this.NE = pool.next();
+			this.NE.critter = toAdd;
+		} else {
+			this.NE.insert(toAdd,pool);
+		}
+	}
+	,insertNW: function(toAdd,pool) {
+		if(this.NW == null) {
+			this.NW = pool.next();
+			this.NW.critter = toAdd;
+		} else {
+			this.NW.insert(toAdd,pool);
+		}
+	}
+	,insertNE: function(toAdd,pool) {
+		if(this.NE == null) {
+			this.NE = pool.next();
+			this.NE.critter = toAdd;
+		} else {
+			this.NE.insert(toAdd,pool);
+		}
+	}
+	,insertSW: function(toAdd,pool) {
+		if(this.SW == null) {
+			this.SW = pool.next();
+			this.SW.critter = toAdd;
+		} else {
+			this.SW.insert(toAdd,pool);
+		}
+	}
+	,insertSE: function(toAdd,pool) {
+		if(this.SE == null) {
+			this.SE = pool.next();
+			this.SE.critter = toAdd;
+		} else {
+			this.SE.insert(toAdd,pool);
+		}
+	}
+	,__class__: index_Node
 };
 var js__$Boot_HaxeError = function(val) {
 	Error.call(this);
@@ -34432,6 +34944,8 @@ haxe_Unserializer.BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
 haxe_crypto_Base64.CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 haxe_crypto_Base64.BYTES = haxe_io_Bytes.ofString(haxe_crypto_Base64.CHARS);
 haxe_io_FPHelper.helper = new DataView(new ArrayBuffer(8));
+index_Quad.MAX = 16;
+index_Node.frontier = [];
 kha_Assets.images = new kha__$Assets_ImageList();
 kha_Assets.sounds = new kha__$Assets_SoundList();
 kha_Assets.blobs = new kha__$Assets_BlobList();

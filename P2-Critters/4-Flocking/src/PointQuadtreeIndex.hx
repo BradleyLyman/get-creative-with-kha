@@ -1,5 +1,6 @@
 package;
 
+import haxe.ds.GenericStack;
 import kha.math.FastVector2;
 
 using support.VecOps;
@@ -30,7 +31,8 @@ class PointQuadtreeIndex implements CritterWorld.Index {
     if (root == null) {
       return;
     } else {
-      root.nearby(point, range, results);
+      Node.nearby(root, point, range, results);
+      // root.nearby(point, range, results);
     }
   }
 
@@ -75,6 +77,8 @@ class Node {
   public var SE:Node = null;
   public var critter:Critter = null;
 
+  static var frontier = new Array<Node>();
+
   public inline function new() {}
 
   public inline function reset() {
@@ -85,62 +89,59 @@ class Node {
     critter = null;
   }
 
-  public function nearby(
+  public static function nearby(
+    root:Node,
     point:FastVector2,
     range:Float,
     results:Array<Critter>
   ) {
-    final length = critter.pos.sub(point).sqrLen();
-    if (length <= range * range) {
-      results.push(critter);
-      nearbyNW(point, range, results);
-      nearbyNE(point, range, results);
-      nearbySW(point, range, results);
-      nearbySE(point, range, results);
-    } else {
-      if (point.x + range < critter.pos.x || point.x - range < critter.pos.x) {
-        if (point.y + range < critter.pos.y || point.y
-          - range < critter.pos.y) {
-          nearbySW(point, range, results);
-        }
-        if (point.y - range >= critter.pos.y
-          || point.y + range >= critter.pos.y) {
-          nearbyNW(point, range, results);
-        }
-      }
+    frontier.resize(0);
+    frontier.push(root);
 
-      if (point.x - range >= critter.pos.x || point.x
-        + range >= critter.pos.x) {
-        if (point.y + range < critter.pos.y || point.y
-          - range < critter.pos.y) {
-          nearbySE(point, range, results);
+    while (frontier.length > 0) {
+      final current = frontier.pop();
+
+      final length = current.critter.pos.sub(point).sqrLen();
+      if (length <= range * range) {
+        results.push(current.critter);
+        if (current.NW != null)
+          frontier.push(current.NW);
+        if (current.NE != null)
+          frontier.push(current.NE);
+        if (current.SW != null)
+          frontier.push(current.SW);
+        if (current.SE != null)
+          frontier.push(current.SE);
+      } else {
+        if (point.x + range < current.critter.pos.x
+          || point.x - range < current.critter.pos.x) {
+          if (point.y + range < current.critter.pos.y
+            || point.y - range < current.critter.pos.y) {
+            if (current.SW != null)
+              frontier.push(current.SW);
+          }
+          if (point.y - range >= current.critter.pos.y
+            || point.y + range >= current.critter.pos.y) {
+            if (current.NW != null)
+              frontier.push(current.NW);
+          }
         }
-        if (point.y - range >= critter.pos.y
-          || point.y + range >= critter.pos.y) {
-          nearbyNE(point, range, results);
+
+        if (point.x - range >= current.critter.pos.x
+          || point.x + range >= current.critter.pos.x) {
+          if (point.y + range < current.critter.pos.y
+            || point.y - range < current.critter.pos.y) {
+            if (current.SE != null)
+              frontier.push(current.SE);
+          }
+          if (point.y - range >= current.critter.pos.y
+            || point.y + range >= current.critter.pos.y) {
+            if (current.NE != null)
+              frontier.push(current.NE);
+          }
         }
       }
     }
-  }
-
-  private inline function nearbyNW(point, range, results) {
-    if (NW != null)
-      NW.nearby(point, range, results);
-  }
-
-  private inline function nearbyNE(point, range, results) {
-    if (NE != null)
-      NE.nearby(point, range, results);
-  }
-
-  private inline function nearbySW(point, range, results) {
-    if (SW != null)
-      SW.nearby(point, range, results);
-  }
-
-  private inline function nearbySE(point, range, results) {
-    if (SE != null)
-      SE.nearby(point, range, results);
   }
 
   public function insert(toAdd:Critter, pool:Pool) {
